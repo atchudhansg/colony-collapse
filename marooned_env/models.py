@@ -199,6 +199,20 @@ class ShipProgress:
         """Check if ship is ready to escape"""
         return self.total_percentage >= 100
     
+    def recalculate_total(self):
+        """Recalculate total ship progress from all components"""
+        from config import SHIP_COMPONENTS
+        total = 0
+        for component, comp_progress in self.components.items():
+            if comp_progress.completed:
+                # Completed components contribute their full percentage
+                total += SHIP_COMPONENTS[component]["percentage"]
+            else:
+                # Partial progress is weighted by component's target percentage
+                component_weight = SHIP_COMPONENTS[component]["percentage"]
+                total += (comp_progress.progress_percentage / 100.0) * component_weight
+        self.total_percentage = int(total)
+    
     def can_build_component(self, component: ShipComponent) -> bool:
         """Check if prerequisites are met"""
         from config import SHIP_COMPONENTS
@@ -233,10 +247,27 @@ class Evidence:
 class EvidenceLog:
     """Collection of all evidence gathered"""
     all_evidence: List[Evidence] = field(default_factory=list)
+    _evidence_counter: int = 0
     
-    def add_evidence(self, evidence: Evidence):
+    def add_evidence(self, day: int, evidence_type: EvidenceType, description: str, 
+                    involved_sailors: List[str], strength: int = 50,
+                    witness: Optional[str] = None, turn: int = 0):
         """Add new evidence to log"""
+        # Use first involved sailor as accused, or None
+        accused = involved_sailors[0] if involved_sailors else None
+        
+        evidence = Evidence(
+            evidence_id=f"EVIDENCE_{self._evidence_counter}",
+            evidence_type=evidence_type,
+            day=day,
+            turn=turn,
+            accused_sailor=accused,
+            witness=witness,
+            description=description,
+            strength=strength,
+        )
         self.all_evidence.append(evidence)
+        self._evidence_counter += 1
     
     def get_evidence_against(self, sailor_id: str) -> List[Evidence]:
         """Get all evidence against a specific sailor"""
@@ -302,15 +333,17 @@ class Vote:
 class VotingSession:
     """A voting round"""
     day: int
-    votes: List[Vote] = field(default_factory=list)
+    turn: int
+    initiated_by: str
+    votes: Dict[str, str] = field(default_factory=dict)  # voter_id -> accused_id
     eliminated: Optional[str] = None
     was_traitor: Optional[bool] = None
     
     def get_vote_counts(self) -> Dict[str, int]:
         """Count votes for each accused sailor"""
         counts = {}
-        for vote in self.votes:
-            counts[vote.accused] = counts.get(vote.accused, 0) + 1
+        for accused in self.votes.values():
+            counts[accused] = counts.get(accused, 0) + 1
         return counts
     
     def get_most_voted(self) -> Optional[str]:
@@ -348,6 +381,7 @@ class Action:
     target_resource_id: Optional[str] = None
     target_sailor: Optional[str] = None
     resource_type: Optional[ResourceType] = None
+    ship_component: Optional[ShipComponent] = None
     quantity: int = 1
     message_content: Optional[str] = None
     vote_target: Optional[str] = None

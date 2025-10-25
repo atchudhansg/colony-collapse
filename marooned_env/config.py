@@ -467,6 +467,7 @@ class ActionType(Enum):
     DEPOSIT_ITEM = "deposit_item"        # To common inventory
     TAKE_FROM_COMMON = "take_from_common"
     GIVE_ITEM = "give_item"              # To another sailor
+    OFFER_FOOD = "offer_food"            # Offer food (or poison) to another sailor
     DROP_ITEM = "drop_item"              # Discard from backpack
     
     # Ship building

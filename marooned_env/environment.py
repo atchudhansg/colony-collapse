@@ -13,12 +13,14 @@ from config import (
     TOTAL_SAILORS, MAX_DAYS, TURNS_PER_DAY,
     SPATIAL_VIEW_RADIUS, ActionType, ResourceType,
     ENERGY_COST_WALK, ENERGY_COST_CLIMB_UP, ENERGY_COST_CLIMB_DOWN,
-    ENERGY_COST_GATHER, ENERGY_COST_BUILD,
+    ENERGY_COST_GATHER, ENERGY_COST_BUILD, FOOD_ENERGY_VALUES,
+    SHIP_SITE_POSITION, VOTING_ALLOWED_PHASES, MapLevel,
 )
 
 from models import (
     Action, Observation, Position, SpatialView, 
     Message, MessageType, Evidence, EvidenceType,
+    PoisonState, ShipComponent, VotingSession, DeathCause, Sailor,
 )
 
 from game_state import GameState, create_initial_game_state
@@ -128,12 +130,17 @@ class MaroonedEnv:
         # Advance turn
         self.state.advance_turn()
         
+        # Update poison states (at end of each day)
+        if self.state.current_turn % TURNS_PER_DAY == 0:
+            self._update_poison_states()
+        
         # Phase 2: Advance to next sailor in turn order
         if phase2_mode:
             self.state.advance_to_next_sailor()
         
         # Check win conditions
-        winner = self.state.check_win_conditions()
+        win_result = self._check_win_conditions()
+        winner = win_result.get("winner") if win_result else None
         
         # Generate observations
         observations = {}
@@ -231,8 +238,11 @@ class MaroonedEnv:
         elif action_type == ActionType.CALL_SOS:
             return self._handle_sos(sailor_id)
         
+        elif action_type == ActionType.CALL_VOTE:
+            return self._handle_call_vote(sailor_id, action.vote_target)
+        
         elif action_type == ActionType.VOTE:
-            return self._handle_vote(sailor_id, action.vote_target)
+            return self._handle_vote_cast(sailor_id, action.vote_target)
         
         elif action_type == ActionType.EAT_FOOD:
             return self._handle_eat_food(sailor_id, action.resource_type)
@@ -241,8 +251,15 @@ class MaroonedEnv:
             return self._handle_give_item(sailor_id, action.target_sailor, 
                                          action.resource_type, action.quantity)
         
+        elif action_type == ActionType.OFFER_FOOD:
+            return self._handle_offer_food(sailor_id, action.target_sailor, 
+                                          action.resource_type)
+        
         elif action_type == ActionType.USE_ANTIDOTE:
             return self._handle_use_antidote(sailor_id, action.target_sailor)
+        
+        elif action_type == ActionType.SABOTAGE_SHIP:
+            return self._handle_sabotage_ship(sailor_id, action.ship_component)
         
         elif action_type == ActionType.WAIT:
             return {"success": True, "action": "wait"}
@@ -654,6 +671,302 @@ class MaroonedEnv:
             "success": True,
             "cured": target_id,
         }
+    
+    def _handle_offer_food(self, giver_id: str, receiver_id: str, 
+                          item_type: ResourceType) -> Dict:
+        """Handle offering food (or poison disguised as food) to another sailor."""
+        giver = self.state.get_sailor(giver_id)
+        receiver = self.state.get_sailor(receiver_id)
+        
+        if not receiver or not receiver.alive:
+            return {"success": False, "reason": "Receiver not found or dead"}
+        
+        # Must be adjacent
+        if not giver.position.is_adjacent(receiver.position):
+            return {"success": False, "reason": "Not adjacent to receiver"}
+        
+        # Must have the item
+        if not giver.has_item(item_type, 1):
+            return {"success": False, "reason": f"Don't have {item_type.value}"}
+        
+        # Remove from giver
+        giver.remove_from_backpack(item_type, 1)
+        
+        # If poison, mark the receiver
+        if item_type == ResourceType.POISON_TABLET:
+            receiver.poison_state = PoisonState.HEALTHY  # Will progress later
+            receiver.poisoned_on_day = self.state.current_day
+            receiver.poisoned_by = giver_id
+            
+            # Add to evidence log
+            self.state.evidence_log.add_evidence(
+                day=self.state.current_day,
+                evidence_type=EvidenceType.SUSPICIOUS_DEATH,
+                description=f"{receiver_id} was fed by {giver_id} on Day {self.state.current_day}",
+                involved_sailors=[giver_id, receiver_id],
+                strength=50,
+            )
+        else:
+            # Regular food - receiver can eat it later or store it
+            # For simplicity, auto-consume it
+            if item_type in FOOD_ENERGY_VALUES:
+                energy_gain = FOOD_ENERGY_VALUES[item_type]
+                receiver.energy = min(100, receiver.energy + energy_gain)
+                receiver.ate_food_today = True
+        
+        return {
+            "success": True,
+            "offered": item_type.value,
+            "to": receiver_id,
+            "is_poison": item_type == ResourceType.POISON_TABLET,
+        }
+    
+    def _handle_sabotage_ship(self, sailor_id: str, component: ShipComponent) -> Dict:
+        """Handle traitor sabotaging ship progress (traitor-only action)."""
+        sailor = self.state.get_sailor(sailor_id)
+        
+        # Only traitors can sabotage
+        if not self.state.is_traitor(sailor_id):
+            return {"success": False, "reason": "Only traitors can sabotage"}
+        
+        # Must be at ship site
+        ship_pos = Position(*SHIP_SITE_POSITION)
+        if sailor.position != ship_pos:
+            return {"success": False, "reason": "Must be at ship site"}
+        
+        # Check if component exists and has progress
+        if component not in self.state.ship_progress.components:
+            return {"success": False, "reason": "Invalid component"}
+        
+        comp_progress = self.state.ship_progress.components[component]
+        if comp_progress.progress_percentage == 0:
+            return {"success": False, "reason": "Component has no progress to damage"}
+        
+        # Sabotage: reduce progress by 20-40%
+        damage = self.state.rng.randint(20, 40)
+        comp_progress.progress_percentage = max(0, comp_progress.progress_percentage - damage)
+        
+        # Recalculate total ship progress
+        self.state.ship_progress.recalculate_total()
+        
+        # Add to evidence log (hidden for now, but trackable)
+        self.state.evidence_log.add_evidence(
+            day=self.state.current_day,
+            evidence_type=EvidenceType.SHIP_SABOTAGE,
+            description=f"Ship component {component.value} was damaged! Progress reduced by {damage}%",
+            involved_sailors=[sailor_id],
+            strength=95,
+        )
+        
+        return {
+            "success": True,
+            "component": component.value,
+            "damage": damage,
+            "new_progress": comp_progress.progress_percentage,
+        }
+    
+    def _handle_call_vote(self, caller_id: str, accused_id: Optional[str] = None) -> Dict:
+        """Handle initiating a vote to eliminate a sailor."""
+        caller = self.state.get_sailor(caller_id)
+        
+        # Check if voting is allowed in current phase
+        phase_info = self.state.get_current_phase_info()
+        if phase_info["phase"] not in VOTING_ALLOWED_PHASES:
+            return {"success": False, "reason": f"Cannot vote during {phase_info['phase']} phase"}
+        
+        # Check if vote already in progress
+        if self.state.current_vote is not None:
+            return {"success": False, "reason": "Vote already in progress"}
+        
+        # Create new voting session
+        self.state.current_vote = VotingSession(
+            initiated_by=caller_id,
+            day=self.state.current_day,
+            turn=self.state.current_turn,
+        )
+        
+        # If accused specified, add caller's vote
+        if accused_id:
+            self.state.current_vote.votes[caller_id] = accused_id
+        
+        return {
+            "success": True,
+            "vote_initiated": True,
+            "by": caller_id,
+        }
+    
+    def _handle_vote_cast(self, voter_id: str, accused_id: str) -> Dict:
+        """Handle casting a vote for elimination."""
+        voter = self.state.get_sailor(voter_id)
+        
+        # Check if vote in progress
+        if self.state.current_vote is None:
+            return {"success": False, "reason": "No vote in progress"}
+        
+        # Check if accused is alive
+        accused = self.state.get_sailor(accused_id)
+        if not accused or not accused.alive:
+            return {"success": False, "reason": "Cannot vote for dead sailor"}
+        
+        # Cast vote
+        self.state.current_vote.votes[voter_id] = accused_id
+        
+        # Check if all living sailors have voted
+        living_count = len(self.state.living_sailors)
+        votes_cast = len(self.state.current_vote.votes)
+        
+        if votes_cast >= living_count:
+            # Process vote result
+            return self._process_vote_result()
+        
+        return {
+            "success": True,
+            "voted_for": accused_id,
+            "votes_remaining": living_count - votes_cast,
+        }
+    
+    def _process_vote_result(self) -> Dict:
+        """Process voting result and eliminate sailor if majority reached."""
+        if self.state.current_vote is None:
+            return {"success": False, "reason": "No vote to process"}
+        
+        # Count votes
+        vote_counts = {}
+        for voted_for in self.state.current_vote.votes.values():
+            vote_counts[voted_for] = vote_counts.get(voted_for, 0) + 1
+        
+        # Find sailor with most votes
+        if not vote_counts:
+            self.state.current_vote = None
+            return {"success": False, "reason": "No votes cast"}
+        
+        max_votes = max(vote_counts.values())
+        eliminated = [sailor for sailor, count in vote_counts.items() if count == max_votes]
+        
+        # If tie, no elimination (or random choice)
+        if len(eliminated) > 1:
+            self.state.current_vote.eliminated = None
+            self.state.voting_history.append(self.state.current_vote)
+            self.state.current_vote = None
+            return {
+                "success": True,
+                "result": "tie",
+                "tied_sailors": eliminated,
+            }
+        
+        # Eliminate the sailor
+        eliminated_id = eliminated[0]
+        eliminated_sailor = self.state.get_sailor(eliminated_id)
+        
+        # Mark as dead
+        self.state.kill_sailor(eliminated_id, DeathCause.ELIMINATED)
+        
+        # Record vote result
+        self.state.current_vote.eliminated = eliminated_id
+        self.state.current_vote.was_traitor = self.state.is_traitor(eliminated_id)
+        self.state.voting_history.append(self.state.current_vote)
+        self.state.current_vote = None
+        
+        # Rebuild turn order
+        self.state.rebuild_turn_order()
+        
+        # Check win conditions
+        win_result = self._check_win_conditions()
+        
+        return {
+            "success": True,
+            "eliminated": eliminated_id,
+            "was_traitor": self.state.is_traitor(eliminated_id),
+            "votes": vote_counts,
+            "game_over": win_result is not None,
+            "winner": win_result.get("winner") if win_result else None,
+        }
+    
+    def _check_win_conditions(self) -> Optional[Dict]:
+        """Check if game has reached a win/loss condition."""
+        # Colonists win if traitor eliminated
+        if self.state.traitor_id and not self.state.get_sailor(self.state.traitor_id).alive:
+            self.state.game_over = True
+            self.state.winner = "sailors"
+            return {
+                "winner": "sailors",
+                "reason": "Traitor eliminated",
+                "day": self.state.current_day,
+            }
+        
+        # Colonists win if ship complete
+        if self.state.ship_progress.total_percentage >= 100:
+            self.state.game_over = True
+            self.state.winner = "sailors"
+            return {
+                "winner": "sailors",
+                "reason": "Ship complete",
+                "day": self.state.current_day,
+            }
+        
+        # Count living honest sailors
+        living_honest = sum(1 for sid in self.state.living_sailors 
+                           if not self.state.is_traitor(sid))
+        
+        # Traitor wins if all honest sailors dead
+        if living_honest == 0:
+            self.state.game_over = True
+            self.state.winner = "traitor"
+            return {
+                "winner": "traitor",
+                "reason": "All colonists dead",
+                "day": self.state.current_day,
+            }
+        
+        # Traitor wins if too few sailors to build ship
+        if len(self.state.living_sailors) < 3:
+            self.state.game_over = True
+            self.state.winner = "traitor"
+            return {
+                "winner": "traitor",
+                "reason": "Too few sailors to complete ship",
+                "day": self.state.current_day,
+            }
+        
+        # Traitor wins if day 100 reached without ship completion
+        if self.state.current_day >= MAX_DAYS and self.state.ship_progress.total_percentage < 100:
+            self.state.game_over = True
+            self.state.winner = "traitor"
+            return {
+                "winner": "traitor",
+                "reason": "Time expired",
+                "day": self.state.current_day,
+            }
+        
+        return None
+    
+    def _update_poison_states(self):
+        """Update poison states for all sailors at end of day."""
+        from config import POISON_SYMPTOM_ONSET, POISON_SEVERE_ONSET, POISON_DEATH_DAY
+        
+        for sailor_id, sailor in self.state.sailors.items():
+            if not sailor.alive or sailor.poisoned_on_day is None:
+                continue
+            
+            days_since_poison = self.state.current_day - sailor.poisoned_on_day
+            
+            if days_since_poison >= POISON_DEATH_DAY:
+                # Death from poison
+                self.state.kill_sailor(sailor_id, DeathCause.POISONING)
+                
+                # Add evidence
+                if sailor.poisoned_by:
+                    self.state.evidence_log.add_evidence(
+                        day=self.state.current_day,
+                        evidence_type=EvidenceType.SUSPICIOUS_DEATH,
+                        description=f"{sailor_id} died of POISONING. Last fed by {sailor.poisoned_by} on Day {sailor.poisoned_on_day}",
+                        involved_sailors=[sailor_id, sailor.poisoned_by],
+                        strength=90,
+                    )
+            elif days_since_poison >= POISON_SEVERE_ONSET:
+                sailor.poison_state = PoisonState.SEVERE_SYMPTOMS
+            elif days_since_poison >= POISON_SYMPTOM_ONSET:
+                sailor.poison_state = PoisonState.EARLY_SYMPTOMS
     
     # ========================================================================
     # OBSERVATION GENERATION
