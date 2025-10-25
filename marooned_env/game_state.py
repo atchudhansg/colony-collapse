@@ -556,14 +556,14 @@ def create_initial_game_state(seed: int = None, sailor_names: List[str] = None) 
     if sailor_names is None:
         sailor_names = ["Alice", "Bob", "Charlie", "Diana", "Eve"]
     
-    # If no seed provided, generate a random one
+    # If no seed provided, generate a random one for dynamic environments
     if seed is None:
         seed = random.randint(0, 2**31 - 1)
     
     state = GameState(seed=seed)
     state.rng.seed(seed)
     
-    # Initialize world map
+    # Initialize world map (will be different for each seed)
     state.world_map = _create_world_map(state.rng)
     
     # Initialize sailors
@@ -654,23 +654,45 @@ def _create_world_map(rng: random.Random) -> WorldMap:
             
             world.poison_tablets[poison_id] = pos
     
-    # Add level transitions - fixed entry/exit points
-    # Ground level has stairs at specific locations
-    # When you go up/down, you enter at specific entrance on that level
+    # Add level transitions - RANDOMIZED for each episode!
+    # Each level has 3 entry/exit points, randomly positioned
     
-    # Mountain transitions (3 entry points from ground)
-    mountain_entries = [
-        (Position(5, 5, MapLevel.GROUND), Position(5, 0, MapLevel.MOUNTAIN)),    # North entrance
-        (Position(20, 8, MapLevel.GROUND), Position(9, 5, MapLevel.MOUNTAIN)),   # East entrance  
-        (Position(10, 25, MapLevel.GROUND), Position(0, 9, MapLevel.MOUNTAIN)),  # South entrance
-    ]
+    # Mountain transitions (3 random entry points from ground)
+    ground_width, ground_height = MAP_SIZES[MapLevel.GROUND]
+    mountain_width, mountain_height = MAP_SIZES[MapLevel.MOUNTAIN]
     
-    # Cave transitions (3 entry points from ground)
-    cave_entries = [
-        (Position(8, 12, MapLevel.GROUND), Position(7, 0, MapLevel.CAVE)),       # Northwest cave
-        (Position(22, 15, MapLevel.GROUND), Position(14, 7, MapLevel.CAVE)),     # East cave
-        (Position(15, 22, MapLevel.GROUND), Position(7, 14, MapLevel.CAVE)),     # South cave
-    ]
+    mountain_entries = []
+    for i in range(3):
+        # Random position on ground level
+        ground_x = rng.randint(0, ground_width - 1)
+        ground_y = rng.randint(0, ground_height - 1)
+        
+        # Random entrance on mountain level
+        mountain_x = rng.randint(0, mountain_width - 1)
+        mountain_y = rng.randint(0, mountain_height - 1)
+        
+        mountain_entries.append((
+            Position(ground_x, ground_y, MapLevel.GROUND),
+            Position(mountain_x, mountain_y, MapLevel.MOUNTAIN)
+        ))
+    
+    # Cave transitions (3 random entry points from ground)
+    cave_width, cave_height = MAP_SIZES[MapLevel.CAVE]
+    
+    cave_entries = []
+    for i in range(3):
+        # Random position on ground level
+        ground_x = rng.randint(0, ground_width - 1)
+        ground_y = rng.randint(0, ground_height - 1)
+        
+        # Random entrance on cave level
+        cave_x = rng.randint(0, cave_width - 1)
+        cave_y = rng.randint(0, cave_height - 1)
+        
+        cave_entries.append((
+            Position(ground_x, ground_y, MapLevel.GROUND),
+            Position(cave_x, cave_y, MapLevel.CAVE)
+        ))
     
     world.level_transitions.extend(mountain_entries)
     world.level_transitions.extend(cave_entries)
