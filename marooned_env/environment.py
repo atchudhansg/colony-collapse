@@ -378,8 +378,118 @@ class MaroonedEnv:
     
     def _handle_build_ship(self, sailor_id: str) -> Dict:
         """Handle ship building action."""
-        # TODO: Implement cooperative building mechanics
-        return {"success": False, "reason": "Building not yet implemented"}
+        sailor = self.state.get_sailor(sailor_id)
+        
+        # Must be at ship site
+        from config import SHIP_SITE_POSITION, MIN_SAILORS_TO_BUILD, SHIP_COMPONENTS, ENERGY_COST_BUILD
+        ship_site = Position(*SHIP_SITE_POSITION)
+        
+        if sailor.position != ship_site:
+            return {"success": False, "reason": "Must be at ship site to build"}
+        
+        # Check if enough energy
+        if sailor.energy < ENERGY_COST_BUILD:
+            return {"success": False, "reason": f"Need at least {ENERGY_COST_BUILD} energy to build"}
+        
+        # Count sailors at ship site
+        sailors_at_site = sum(
+            1 for s in self.state.sailors.values() 
+            if s.alive and s.position == ship_site
+        )
+        
+        if sailors_at_site < MIN_SAILORS_TO_BUILD:
+            return {
+                "success": False, 
+                "reason": f"Need at least {MIN_SAILORS_TO_BUILD} sailors at ship site (currently {sailors_at_site})"
+            }
+        
+        # Find which component to build next
+        from models import ShipComponent
+        
+        # Priority order for building
+        component_order = [
+            ShipComponent.HULL,
+            ShipComponent.MAST,
+            ShipComponent.SAIL,
+            ShipComponent.RUDDER,
+            ShipComponent.SUPPLIES,
+        ]
+        
+        component_to_build = None
+        for component in component_order:
+            # Check if already completed
+            if component.value in self.state.ship_progress.components:
+                progress = self.state.ship_progress.components[component.value]
+                if progress.completed:
+                    continue
+            
+            # Check prerequisite
+            component_data = SHIP_COMPONENTS[component]
+            prereq = component_data.get("prerequisite")
+            if prereq is not None:
+                if not self.state.ship_progress.has_prerequisite(component):
+                    continue  # Prerequisite not met
+            
+            # Check if we have required resources
+            required_resources = component_data.get("required_resources", {})
+            has_all_resources = True
+            
+            for resource_type, needed in required_resources.items():
+                have = self.state.get_common_inventory_count(resource_type)
+                if have < needed:
+                    has_all_resources = False
+                    break
+            
+            if has_all_resources:
+                component_to_build = component
+                break
+        
+        if component_to_build is None:
+            return {
+                "success": False, 
+                "reason": "No buildable components (missing resources or prerequisites)"
+            }
+        
+        # Deduct resources from common inventory
+        component_data = SHIP_COMPONENTS[component_to_build]
+        required_resources = component_data.get("required_resources", {})
+        
+        for resource_type, needed in required_resources.items():
+            self.state.remove_from_common_inventory(resource_type, needed)
+        
+        # Deduct energy from ALL sailors at ship site
+        for s in self.state.sailors.values():
+            if s.alive and s.position == ship_site:
+                s.energy = max(0, s.energy - ENERGY_COST_BUILD)
+        
+        # Update ship progress
+        percentage = component_data.get("percentage", 0)
+        
+        if component_to_build.value not in self.state.ship_progress.components:
+            from models import ShipComponentProgress
+            self.state.ship_progress.components[component_to_build.value] = ShipComponentProgress(
+                component_name=component_to_build.value,
+                progress=percentage,
+                completed=True,
+            )
+        else:
+            progress = self.state.ship_progress.components[component_to_build.value]
+            progress.progress = percentage
+            progress.completed = True
+        
+        # Update total percentage
+        self.state.ship_progress.total_percentage = sum(
+            comp.progress for comp in self.state.ship_progress.components.values()
+        )
+        
+        return {
+            "success": True,
+            "component": component_to_build.value,
+            "percentage_added": percentage,
+            "total_progress": self.state.ship_progress.total_percentage,
+            "sailors_helped": sailors_at_site,
+            "energy_cost": ENERGY_COST_BUILD,
+        }
     
     def _handle_message(self, sailor_id: str, content: str, recipient: Optional[str]) -> Dict:
         """Handle sending a message."""
