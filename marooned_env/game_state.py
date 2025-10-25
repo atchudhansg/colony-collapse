@@ -126,6 +126,10 @@ class GameState:
     dead_sailors: Set[str] = field(default_factory=set)
     traitor_id: Optional[str] = None
     
+    # Turn order (Phase 2: Multi-sailor turn rotation)
+    active_sailor_index: int = 0
+    sailor_turn_order: List[str] = field(default_factory=list)  # Ordered list of sailor IDs
+    
     # Inventories
     common_inventory: List[InventoryItem] = field(default_factory=list)
     
@@ -242,6 +246,51 @@ class GameState:
     def is_traitor(self, sailor_id: str) -> bool:
         """Check if sailor is the traitor"""
         return sailor_id == self.traitor_id
+    
+    # ========================================================================
+    # TURN ORDER & ROTATION (Phase 2)
+    # ========================================================================
+    
+    def initialize_turn_order(self):
+        """Initialize the turn order with all living sailors"""
+        self.sailor_turn_order = sorted(list(self.living_sailors))
+        self.active_sailor_index = 0
+    
+    def get_active_sailor(self) -> Optional[str]:
+        """Get the currently active sailor ID"""
+        if not self.sailor_turn_order:
+            return None
+        return self.sailor_turn_order[self.active_sailor_index]
+    
+    def advance_to_next_sailor(self):
+        """Move to the next living sailor in turn order"""
+        if not self.sailor_turn_order:
+            return
+        
+        # Try up to len(sailors) times to find a living sailor
+        for _ in range(len(self.sailor_turn_order)):
+            self.active_sailor_index = (self.active_sailor_index + 1) % len(self.sailor_turn_order)
+            next_sailor_id = self.sailor_turn_order[self.active_sailor_index]
+            
+            # Skip dead sailors
+            if next_sailor_id in self.living_sailors:
+                return
+        
+        # If we get here, no living sailors found
+        self.active_sailor_index = 0
+    
+    def rebuild_turn_order(self):
+        """Rebuild turn order when sailors die (remove dead sailors from rotation)"""
+        current_sailor = self.get_active_sailor()
+        
+        # Rebuild list with only living sailors
+        self.sailor_turn_order = sorted(list(self.living_sailors))
+        
+        # Try to preserve current sailor position, or reset to 0
+        if current_sailor and current_sailor in self.sailor_turn_order:
+            self.active_sailor_index = self.sailor_turn_order.index(current_sailor)
+        else:
+            self.active_sailor_index = 0
     
     # ========================================================================
     # POISON SYSTEM
@@ -540,6 +589,9 @@ def create_initial_game_state(seed: int = None, sailor_names: List[str] = None) 
     
     # Initialize weather
     state.weather = Weather(WeatherType.CLEAR, 1, 1)
+    
+    # Initialize turn order (Phase 2)
+    state.initialize_turn_order()
     
     return state
 

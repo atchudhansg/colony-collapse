@@ -103,6 +103,9 @@ class MaroonedEnv:
         """
         Execute one environment step with actions from all agents.
         
+        Phase 2 Mode: If actions contain only one sailor (the active sailor),
+        execute that action, advance to next sailor, and return that sailor's observation.
+        
         Args:
             actions: Dict mapping sailor_id -> Action
             
@@ -113,6 +116,9 @@ class MaroonedEnv:
             truncated: Whether episode was truncated
             info: Additional info for each agent
         """
+        # Determine if Phase 2 mode (single active sailor) or Phase 1 mode (all sailors)
+        phase2_mode = len(actions) == 1 and self.state.get_active_sailor() in actions
+        
         # Process all actions
         action_results = {}
         for sailor_id, action in actions.items():
@@ -121,6 +127,10 @@ class MaroonedEnv:
         
         # Advance turn
         self.state.advance_turn()
+        
+        # Phase 2: Advance to next sailor in turn order
+        if phase2_mode:
+            self.state.advance_to_next_sailor()
         
         # Check win conditions
         winner = self.state.check_win_conditions()
@@ -132,16 +142,32 @@ class MaroonedEnv:
         truncated = {}
         info = {}
         
-        for sailor_id in self.sailor_names:
-            observations[sailor_id] = self._generate_observation(sailor_id)
-            rewards[sailor_id] = self._calculate_reward(sailor_id, winner)
-            dones[sailor_id] = self.state.game_over or sailor_id in self.state.dead_sailors
-            truncated[sailor_id] = self.state.current_day > MAX_DAYS
-            info[sailor_id] = {
-                "action_result": action_results.get(sailor_id, {}),
-                "alive": sailor_id in self.state.living_sailors,
-                "is_traitor": self.state.is_traitor(sailor_id),
-            }
+        # Phase 2 mode: Only return observation for next active sailor
+        if phase2_mode:
+            next_sailor = self.state.get_active_sailor()
+            if next_sailor:
+                observations[next_sailor] = self._generate_observation(next_sailor)
+                rewards[next_sailor] = self._calculate_reward(next_sailor, winner)
+                dones[next_sailor] = self.state.game_over or next_sailor in self.state.dead_sailors
+                truncated[next_sailor] = self.state.current_day > MAX_DAYS
+                info[next_sailor] = {
+                    "action_result": action_results.get(next_sailor, {}),
+                    "alive": next_sailor in self.state.living_sailors,
+                    "is_traitor": self.state.is_traitor(next_sailor),
+                    "is_active": True,
+                }
+        else:
+            # Phase 1 mode: Return observations for all sailors (backward compatible)
+            for sailor_id in self.sailor_names:
+                observations[sailor_id] = self._generate_observation(sailor_id)
+                rewards[sailor_id] = self._calculate_reward(sailor_id, winner)
+                dones[sailor_id] = self.state.game_over or sailor_id in self.state.dead_sailors
+                truncated[sailor_id] = self.state.current_day > MAX_DAYS
+                info[sailor_id] = {
+                    "action_result": action_results.get(sailor_id, {}),
+                    "alive": sailor_id in self.state.living_sailors,
+                    "is_traitor": self.state.is_traitor(sailor_id),
+                }
         
         return observations, rewards, dones, truncated, info
     
@@ -418,17 +444,14 @@ class MaroonedEnv:
         component_to_build = None
         for component in component_order:
             # Check if already completed
-            if component.value in self.state.ship_progress.components:
-                progress = self.state.ship_progress.components[component.value]
-                if progress.completed:
-                    continue
+            progress = self.state.ship_progress.components.get(component)
+            if progress and progress.completed:
+                continue
             
             # Check prerequisite
             component_data = SHIP_COMPONENTS[component]
-            prereq = component_data.get("prerequisite")
-            if prereq is not None:
-                if not self.state.ship_progress.has_prerequisite(component):
-                    continue  # Prerequisite not met
+            if not self.state.ship_progress.can_build_component(component):
+                continue  # Prerequisite not met
             
             # Check if we have required resources
             required_resources = component_data.get("required_resources", {})
@@ -465,21 +488,21 @@ class MaroonedEnv:
         # Update ship progress
         percentage = component_data.get("percentage", 0)
         
-        if component_to_build.value not in self.state.ship_progress.components:
+        if component_to_build not in self.state.ship_progress.components:
             from models import ShipComponentProgress
-            self.state.ship_progress.components[component_to_build.value] = ShipComponentProgress(
-                component_name=component_to_build.value,
-                progress=percentage,
+            self.state.ship_progress.components[component_to_build] = ShipComponentProgress(
+                component=component_to_build,
+                progress_percentage=percentage,
                 completed=True,
             )
         else:
-            progress = self.state.ship_progress.components[component_to_build.value]
-            progress.progress = percentage
+            progress = self.state.ship_progress.components[component_to_build]
+            progress.progress_percentage = percentage
             progress.completed = True
         
         # Update total percentage
         self.state.ship_progress.total_percentage = sum(
-            comp.progress for comp in self.state.ship_progress.components.values()
+            comp.progress_percentage for comp in self.state.ship_progress.components.values()
         )
         
         return {
