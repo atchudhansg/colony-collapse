@@ -15,6 +15,31 @@ from config import (
     ENERGY_COST_WALK, ENERGY_COST_CLIMB_UP, ENERGY_COST_CLIMB_DOWN,
     ENERGY_COST_GATHER, ENERGY_COST_BUILD, FOOD_ENERGY_VALUES,
     SHIP_SITE_POSITION, VOTING_ALLOWED_PHASES, MapLevel,
+    # Phase 4: Reward constants
+    REWARD_BASE_TURN_PENALTY,
+    REWARD_COLONIST_GATHER_RESOURCE,
+    REWARD_COLONIST_DEPOSIT_RESOURCE,
+    REWARD_COLONIST_BUILD_CONTRIBUTE,
+    REWARD_COLONIST_SHIP_PROGRESS,
+    REWARD_COLONIST_SHIP_COMPLETE,
+    REWARD_COLONIST_TRAITOR_ELIMINATED,
+    REWARD_COLONIST_DEATH,
+    REWARD_COLONIST_VOTE_CORRECT,
+    REWARD_COLONIST_VOTE_WRONG,
+    REWARD_TRAITOR_SABOTAGE_SUCCESS,
+    REWARD_TRAITOR_POISON_DEATH,
+    REWARD_TRAITOR_SHIP_INCOMPLETE,
+    REWARD_TRAITOR_COLONY_COLLAPSE,
+    REWARD_TRAITOR_ELIMINATED,
+    REWARD_TRAITOR_WRONG_VOTE,
+    REWARD_TRAITOR_SUSPICION_PENALTY,
+    REWARD_COMMUNICATION_ACCUSATION_SUCCESS,
+    REWARD_COMMUNICATION_DECEPTION_SUCCESS,
+    REWARD_SHIP_MILESTONE_25,
+    REWARD_SHIP_MILESTONE_50,
+    REWARD_SHIP_MILESTONE_75,
+    REWARD_EFFICIENT_ENERGY_USE,
+    REWARD_ENERGY_CRITICAL,
 )
 
 from models import (
@@ -67,6 +92,11 @@ class MaroonedEnv:
         self.agents = self.sailor_names.copy()
         self.possible_agents = self.sailor_names.copy()
         
+        # Phase 4: Reward tracking for detailed RL feedback
+        self.previous_ship_progress: float = 0.0
+        self.ship_milestones_reached: set = set()  # Track 25%, 50%, 75% milestones
+        self.action_rewards: Dict[str, Dict[str, float]] = {}  # Track rewards per action
+        
     # ========================================================================
     # CORE ENVIRONMENT INTERFACE
     # ========================================================================
@@ -87,6 +117,11 @@ class MaroonedEnv:
         
         # Create fresh game state
         self.state = create_initial_game_state(self.seed, self.sailor_names)
+        
+        # Phase 4: Reset reward tracking
+        self.previous_ship_progress = 0.0
+        self.ship_milestones_reached = set()
+        self.action_rewards = {sailor_id: {} for sailor_id in self.sailor_names}
         
         # Generate initial observations for all sailors
         observations = {}
@@ -115,6 +150,9 @@ class MaroonedEnv:
             truncated: Whether episode was truncated
             info: Additional info for each agent
         """
+        # Phase 4: Reset action rewards for this step
+        self.action_rewards = {sailor_id: {} for sailor_id in self.sailor_names}
+        
         # Process all actions
         action_results = {}
         for sailor_id, action in actions.items():
@@ -173,6 +211,24 @@ class MaroonedEnv:
     def close(self):
         """Clean up environment resources."""
         pass
+    
+    # ========================================================================
+    # REWARD SIGNAL TRACKING (PHASE 4)
+    # ========================================================================
+    
+    def _record_reward_signal(self, sailor_id: str, signal_name: str, value: bool = True):
+        """
+        Record a reward signal for a sailor's action.
+        This is used by action handlers to communicate with the reward function.
+        
+        Args:
+            sailor_id: The sailor who performed the action
+            signal_name: Name of the reward signal (e.g., "gathered_resource", "sabotaged")
+            value: Signal value (usually True, but can be False or a number)
+        """
+        if sailor_id not in self.action_rewards:
+            self.action_rewards[sailor_id] = {}
+        self.action_rewards[sailor_id][signal_name] = value
     
     # ========================================================================
     # ACTION EXECUTION
@@ -377,6 +433,9 @@ class MaroonedEnv:
             self.state.sailor_gathered_resources[sailor_id][resource.resource_type] = 0
         self.state.sailor_gathered_resources[sailor_id][resource.resource_type] += resource.quantity
         
+        # Phase 4: Record reward signal for gathering resource
+        self._record_reward_signal(sailor_id, "gathered_resource", True)
+        
         return {
             "success": True,
             "resource_type": resource.resource_type.value,
@@ -429,6 +488,9 @@ class MaroonedEnv:
         
         # Add to common inventory
         self.state.add_to_common_inventory(resource_type, quantity)
+        
+        # Phase 4: Record reward signal for depositing
+        self._record_reward_signal(sailor_id, "deposited_resource", True)
         
         return {
             "success": True,
@@ -538,6 +600,9 @@ class MaroonedEnv:
         self.state.ship_progress.total_percentage = sum(
             comp.progress_percentage for comp in self.state.ship_progress.components.values()
         )
+        
+        # Phase 4: Record reward signal for building ship
+        self._record_reward_signal(sailor_id, "built_ship", True)
         
         return {
             "success": True,
@@ -775,6 +840,9 @@ class MaroonedEnv:
             strength=95,
         )
         
+        # Phase 4: Record reward signal for successful sabotage
+        self._record_reward_signal(sailor_id, "sabotaged", True)
+        
         return {
             "success": True,
             "component": component.value,
@@ -874,13 +942,30 @@ class MaroonedEnv:
         # Eliminate the sailor
         eliminated_id = eliminated[0]
         eliminated_sailor = self.state.get_sailor(eliminated_id)
+        was_traitor = self.state.is_traitor(eliminated_id)
+        
+        # Phase 4: Record voting reward signals
+        for voter_id, voted_for in self.state.current_vote.votes.items():
+            if voted_for == eliminated_id:
+                if was_traitor:
+                    # Voted for traitor - correct!
+                    self._record_reward_signal(voter_id, "voted_correctly", True)
+                else:
+                    # Voted for innocent - wrong!
+                    self._record_reward_signal(voter_id, "voted_incorrectly", True)
+        
+        # If an innocent was eliminated, traitor gets bonus
+        if not was_traitor:
+            traitor_id = self.state.traitor_id
+            if traitor_id:
+                self._record_reward_signal(traitor_id, "wrong_elimination", True)
         
         # Mark as dead
         self.state.kill_sailor(eliminated_id, DeathCause.ELIMINATED)
         
         # Record vote result
         self.state.current_vote.eliminated = eliminated_id
-        self.state.current_vote.was_traitor = self.state.is_traitor(eliminated_id)
+        self.state.current_vote.was_traitor = was_traitor
         self.state.voting_history.append(self.state.current_vote)
         self.state.current_vote = None
         
@@ -893,7 +978,7 @@ class MaroonedEnv:
         return {
             "success": True,
             "eliminated": eliminated_id,
-            "was_traitor": self.state.is_traitor(eliminated_id),
+            "was_traitor": was_traitor,
             "votes": vote_counts,
             "game_over": win_result is not None,
             "winner": win_result.get("winner") if win_result else None,
@@ -970,6 +1055,10 @@ class MaroonedEnv:
             if days_since_poison >= POISON_DEATH_DAY:
                 # Death from poison
                 self.state.kill_sailor(sailor_id, DeathCause.POISONING)
+                
+                # Phase 4: Record poison kill reward signal for the poisoner
+                if sailor.poisoned_by:
+                    self._record_reward_signal(sailor.poisoned_by, "poison_kill", True)
                 
                 # Add evidence
                 if sailor.poisoned_by:
@@ -1092,34 +1181,161 @@ class MaroonedEnv:
         )
     
     # ========================================================================
-    # REWARD CALCULATION
+    # REWARD CALCULATION (PHASE 4: RL REWARD SHAPING)
     # ========================================================================
     
     def _calculate_reward(self, sailor_id: str, winner: Optional[str]) -> float:
-        """Calculate reward for a sailor."""
+        """
+        Calculate comprehensive reward for a sailor based on their role and actions.
+        
+        This implements Phase 4 reward shaping:
+        - Colonists get rewarded for cooperation, ship building, and eliminating traitor
+        - Traitor gets rewarded for sabotage, deception, and preventing ship completion
+        
+        Args:
+            sailor_id: The sailor to calculate reward for
+            winner: Winner of the game ("sailors", "traitor", or None if ongoing)
+            
+        Returns:
+            float: Total reward for this step
+        """
         sailor = self.state.get_sailor(sailor_id)
         is_traitor = self.state.is_traitor(sailor_id)
         
-        # Base reward: small penalty per turn to encourage efficiency
-        reward = -0.01
+        # Initialize reward with base turn penalty (encourages efficiency)
+        reward = REWARD_BASE_TURN_PENALTY
         
-        # Ship progress rewards (for honest sailors)
+        # Get action rewards accumulated this step (if any)
+        action_reward = self.action_rewards.get(sailor_id, {})
+        
+        # ====================================================================
+        # COLONIST (Honest Sailor) REWARDS
+        # ====================================================================
         if not is_traitor:
-            reward += self.state.ship_progress.total_percentage * 0.01
+            # +small for valid resource gathering
+            if action_reward.get("gathered_resource", False):
+                reward += REWARD_COLONIST_GATHER_RESOURCE
+            
+            # +small for depositing to common inventory
+            if action_reward.get("deposited_resource", False):
+                reward += REWARD_COLONIST_DEPOSIT_RESOURCE
+            
+            # +small for contributing to ship build
+            if action_reward.get("built_ship", False):
+                reward += REWARD_COLONIST_BUILD_CONTRIBUTE
+            
+            # +bonus for ship progress (scaled by current progress)
+            current_progress = self.state.ship_progress.total_percentage
+            progress_delta = current_progress - self.previous_ship_progress
+            if progress_delta > 0:
+                reward += REWARD_COLONIST_SHIP_PROGRESS * progress_delta
+            
+            # +BIG milestone bonuses (25%, 50%, 75%, 100%)
+            if current_progress >= 25 and 25 not in self.ship_milestones_reached:
+                reward += REWARD_SHIP_MILESTONE_25
+                self.ship_milestones_reached.add(25)
+            if current_progress >= 50 and 50 not in self.ship_milestones_reached:
+                reward += REWARD_SHIP_MILESTONE_50
+                self.ship_milestones_reached.add(50)
+            if current_progress >= 75 and 75 not in self.ship_milestones_reached:
+                reward += REWARD_SHIP_MILESTONE_75
+                self.ship_milestones_reached.add(75)
+            
+            # +BIG when ship reaches 100%
+            if current_progress >= 100:
+                reward += REWARD_COLONIST_SHIP_COMPLETE
+            
+            # +BIG when traitor eliminated
+            if winner == "sailors":
+                reward += REWARD_COLONIST_TRAITOR_ELIMINATED
+            
+            # -BIG if they die
+            if not sailor.alive:
+                reward += REWARD_COLONIST_DEATH
+            
+            # +small if vote matches true traitor (optional - check voting session)
+            if action_reward.get("voted_correctly", False):
+                reward += REWARD_COLONIST_VOTE_CORRECT
+            
+            # -small if voted for innocent
+            if action_reward.get("voted_incorrectly", False):
+                reward += REWARD_COLONIST_VOTE_WRONG
+            
+            # Efficient energy management
+            if sailor.energy > 50:
+                reward += REWARD_EFFICIENT_ENERGY_USE
+            elif sailor.energy < 20:
+                reward += REWARD_ENERGY_CRITICAL
         
-        # Game outcome rewards
+        # ====================================================================
+        # TRAITOR REWARDS
+        # ====================================================================
+        else:  # is_traitor
+            # +small for successful sabotage
+            if action_reward.get("sabotaged", False):
+                reward += REWARD_TRAITOR_SABOTAGE_SUCCESS
+            
+            # +small for causing poison death
+            if action_reward.get("poison_kill", False):
+                reward += REWARD_TRAITOR_POISON_DEATH
+            
+            # +BIG if ship not done by Day 100
+            if winner == "traitor":
+                reward += REWARD_TRAITOR_SHIP_INCOMPLETE
+            
+            # +BIG if colony falls below 3 survivors
+            living_count = len([s for s in self.state.sailors.values() if s.alive])
+            if living_count < 3:
+                reward += REWARD_TRAITOR_COLONY_COLLAPSE
+            
+            # -BIG if traitor is eliminated
+            if not sailor.alive and sailor.death_cause == DeathCause.ELIMINATED:
+                reward += REWARD_TRAITOR_ELIMINATED
+            
+            # +small if colonist wrongly voted out (optional)
+            if action_reward.get("wrong_elimination", False):
+                reward += REWARD_TRAITOR_WRONG_VOTE
+            
+            # -small for accumulating suspicion
+            evidence_count = len([e for e in self.state.evidence_log.all_evidence 
+                                 if sailor_id in str(e)])
+            if evidence_count > 3:
+                reward += REWARD_TRAITOR_SUSPICION_PENALTY
+            
+            # Inverse ship progress (traitor wants LOW progress)
+            current_progress = self.state.ship_progress.total_percentage
+            progress_delta = current_progress - self.previous_ship_progress
+            if progress_delta > 0:
+                # Penalize traitor when ship progresses
+                reward -= REWARD_COLONIST_SHIP_PROGRESS * progress_delta * 0.5
+        
+        # ====================================================================
+        # COMMUNICATION SHAPING (Optional - for both roles)
+        # ====================================================================
+        if action_reward.get("accusation_success", False):
+            reward += REWARD_COMMUNICATION_ACCUSATION_SUCCESS
+        
+        if action_reward.get("deception_success", False):
+            reward += REWARD_COMMUNICATION_DECEPTION_SUCCESS
+        
+        # ====================================================================
+        # GAME OUTCOME REWARDS (for both roles)
+        # ====================================================================
         if winner == "sailors" and not is_traitor:
-            reward += 100.0  # Honest sailors win
+            # Colonists win
+            pass  # Already handled above in colonist section
         elif winner == "sailors" and is_traitor:
-            reward -= 100.0  # Traitor loses
+            # Traitor loses (already penalized with ELIMINATED if voted)
+            pass
         elif winner == "traitor" and is_traitor:
-            reward += 100.0  # Traitor wins
+            # Traitor wins (already handled above)
+            pass
         elif winner == "traitor" and not is_traitor:
-            reward -= 100.0  # Honest sailors lose
+            # Colonists lose
+            pass  # Already penalized with negative ship progress
         
-        # Death penalty
-        if not sailor.alive:
-            reward -= 50.0
+        # Update ship progress tracker for next step
+        self.previous_ship_progress = self.state.ship_progress.total_percentage
         
         return reward
     

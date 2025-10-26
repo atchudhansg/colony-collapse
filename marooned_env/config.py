@@ -554,6 +554,47 @@ TRAITOR_SELECTION_SEED_OFFSET = 300
 
 
 # ============================================================================
+# 🎯 REWARD CONFIGURATION (PHASE 4: RL)
+# ============================================================================
+
+# Base rewards for incremental progress
+REWARD_BASE_TURN_PENALTY = -0.01       # Small penalty per turn (encourages efficiency)
+
+# Colonist (Honest Sailor) Reward Signals
+REWARD_COLONIST_GATHER_RESOURCE = 0.1  # +small for valid gather (wood/metal/food)
+REWARD_COLONIST_DEPOSIT_RESOURCE = 0.2 # +small for depositing to common_inventory
+REWARD_COLONIST_BUILD_CONTRIBUTE = 0.5 # +small for contributing to ship build
+REWARD_COLONIST_SHIP_PROGRESS = 1.0    # +bonus per % ship progress (scaled)
+REWARD_COLONIST_SHIP_COMPLETE = 100.0  # +BIG when ship reaches 100%
+REWARD_COLONIST_TRAITOR_ELIMINATED = 100.0  # +BIG when traitor eliminated
+REWARD_COLONIST_DEATH = -50.0          # -BIG if they die
+REWARD_COLONIST_VOTE_CORRECT = 5.0     # +small if vote matches true traitor (optional)
+REWARD_COLONIST_VOTE_WRONG = -5.0      # -small if voted for innocent (optional)
+
+# Traitor Reward Signals
+REWARD_TRAITOR_SABOTAGE_SUCCESS = 2.0  # +small for successful sabotage
+REWARD_TRAITOR_POISON_DEATH = 10.0     # +small for causing poison death
+REWARD_TRAITOR_SHIP_INCOMPLETE = 100.0 # +BIG if ship not done by Day 100
+REWARD_TRAITOR_COLONY_COLLAPSE = 100.0 # +BIG if colony falls below 3 survivors
+REWARD_TRAITOR_ELIMINATED = -100.0     # -BIG if traitor is voted out
+REWARD_TRAITOR_WRONG_VOTE = 5.0        # +small if colonist wrongly voted out (optional)
+REWARD_TRAITOR_SUSPICION_PENALTY = -1.0 # -small if gets too much evidence against them
+
+# Communication shaping (optional, nice to have)
+REWARD_COMMUNICATION_ACCUSATION_SUCCESS = 3.0  # Colonist bonus for correct accusation
+REWARD_COMMUNICATION_DECEPTION_SUCCESS = 3.0   # Traitor bonus for convincing group
+
+# Milestone rewards
+REWARD_SHIP_MILESTONE_25 = 5.0         # Bonus at 25% ship completion
+REWARD_SHIP_MILESTONE_50 = 10.0        # Bonus at 50% ship completion
+REWARD_SHIP_MILESTONE_75 = 15.0        # Bonus at 75% ship completion
+
+# Energy management rewards
+REWARD_EFFICIENT_ENERGY_USE = 0.05     # Small bonus for keeping energy > 50
+REWARD_ENERGY_CRITICAL = -0.5          # Small penalty for energy < 20 (risky)
+
+
+# ============================================================================
 # 🐛 DEBUG & DEVELOPMENT
 # ============================================================================
 
