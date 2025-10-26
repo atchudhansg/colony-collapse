@@ -126,9 +126,9 @@ class GameState:
     dead_sailors: Set[str] = field(default_factory=set)
     traitor_id: Optional[str] = None
     
-    # Turn order (Phase 2: Multi-sailor turn rotation)
+    # Turn order management
     active_sailor_index: int = 0
-    sailor_turn_order: List[str] = field(default_factory=list)  # Ordered list of sailor IDs
+    sailor_turn_order: List[str] = field(default_factory=list)
     
     # Inventories
     common_inventory: List[InventoryItem] = field(default_factory=list)
@@ -248,7 +248,7 @@ class GameState:
         return sailor_id == self.traitor_id
     
     # ========================================================================
-    # TURN ORDER & ROTATION (Phase 2)
+    # TURN ORDER & ROTATION
     # ========================================================================
     
     def initialize_turn_order(self):
@@ -590,7 +590,7 @@ def create_initial_game_state(seed: int = None, sailor_names: List[str] = None) 
     # Initialize weather
     state.weather = Weather(WeatherType.CLEAR, 1, 1)
     
-    # Initialize turn order (Phase 2)
+    # Initialize turn order
     state.initialize_turn_order()
     
     return state

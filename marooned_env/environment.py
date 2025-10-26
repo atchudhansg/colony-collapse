@@ -105,9 +105,6 @@ class MaroonedEnv:
         """
         Execute one environment step with actions from all agents.
         
-        Phase 2 Mode: If actions contain only one sailor (the active sailor),
-        execute that action, advance to next sailor, and return that sailor's observation.
-        
         Args:
             actions: Dict mapping sailor_id -> Action
             
@@ -118,9 +115,6 @@ class MaroonedEnv:
             truncated: Whether episode was truncated
             info: Additional info for each agent
         """
-        # Determine if Phase 2 mode (single active sailor) or Phase 1 mode (all sailors)
-        phase2_mode = len(actions) == 1 and self.state.get_active_sailor() in actions
-        
         # Process all actions
         action_results = {}
         for sailor_id, action in actions.items():
@@ -134,47 +128,30 @@ class MaroonedEnv:
         if self.state.current_turn % TURNS_PER_DAY == 0:
             self._update_poison_states()
         
-        # Phase 2: Advance to next sailor in turn order
-        if phase2_mode:
-            self.state.advance_to_next_sailor()
-        
         # Check win conditions
         win_result = self._check_win_conditions()
         winner = win_result.get("winner") if win_result else None
         
-        # Generate observations
+        # Generate observations for all sailors
         observations = {}
         rewards = {}
         dones = {}
         truncated = {}
         info = {}
         
-        # Phase 2 mode: Only return observation for next active sailor
-        if phase2_mode:
-            next_sailor = self.state.get_active_sailor()
-            if next_sailor:
-                observations[next_sailor] = self._generate_observation(next_sailor)
-                rewards[next_sailor] = self._calculate_reward(next_sailor, winner)
-                dones[next_sailor] = self.state.game_over or next_sailor in self.state.dead_sailors
-                truncated[next_sailor] = self.state.current_day > MAX_DAYS
-                info[next_sailor] = {
-                    "action_result": action_results.get(next_sailor, {}),
-                    "alive": next_sailor in self.state.living_sailors,
-                    "is_traitor": self.state.is_traitor(next_sailor),
-                    "is_active": True,
-                }
-        else:
-            # Phase 1 mode: Return observations for all sailors (backward compatible)
-            for sailor_id in self.sailor_names:
-                observations[sailor_id] = self._generate_observation(sailor_id)
-                rewards[sailor_id] = self._calculate_reward(sailor_id, winner)
-                dones[sailor_id] = self.state.game_over or sailor_id in self.state.dead_sailors
-                truncated[sailor_id] = self.state.current_day > MAX_DAYS
-                info[sailor_id] = {
-                    "action_result": action_results.get(sailor_id, {}),
-                    "alive": sailor_id in self.state.living_sailors,
-                    "is_traitor": self.state.is_traitor(sailor_id),
-                }
+        for sailor_id in self.sailor_names:
+            observations[sailor_id] = self._generate_observation(sailor_id)
+            rewards[sailor_id] = self._calculate_reward(sailor_id, winner)
+            dones[sailor_id] = self.state.game_over or sailor_id in self.state.dead_sailors
+            truncated[sailor_id] = self.state.current_day > MAX_DAYS
+            
+            # Make info[sailor_id] directly contain the action result
+            action_result = action_results.get(sailor_id, {})
+            action_result.update({
+                "alive": sailor_id in self.state.living_sailors,
+                "is_traitor": self.state.is_traitor(sailor_id),
+            })
+            info[sailor_id] = action_result
         
         return observations, rewards, dones, truncated, info
     
@@ -343,9 +320,19 @@ class MaroonedEnv:
         if not self.state.consume_energy(sailor_id, energy_cost):
             return {"success": False, "reason": "Not enough energy"}
         
-        # Find corresponding position on new level (simplified)
-        # TODO: Use actual transition mapping
-        new_pos = Position(current_pos.x % 10, current_pos.y % 10, target_level)
+        # Find the actual transition position on the new level
+        new_pos = None
+        for pos1, pos2 in self.state.world_map.level_transitions:
+            if pos1 == current_pos and pos2.level == target_level:
+                new_pos = pos2
+                break
+            elif pos2 == current_pos and pos1.level == target_level:
+                new_pos = pos1
+                break
+        
+        if new_pos is None:
+            return {"success": False, "reason": "No valid transition found"}
+        
         sailor.position = new_pos
         
         return {
@@ -1028,8 +1015,6 @@ class MaroonedEnv:
         """Generate what sailor can see around them."""
         radius = SPATIAL_VIEW_RADIUS
         
-        # TODO: Adjust for cave darkness, fog, etc.
-        
         visible_resources = self.state.world_map.get_resources_at(
             sailor.position, radius
         )
@@ -1243,7 +1228,6 @@ class MaroonedEnv:
     
     def _render_rgb(self) -> np.ndarray:
         """Render as RGB array (for visualization)."""
-        # TODO: Implement visual rendering
         return np.zeros((600, 800, 3), dtype=np.uint8)
 
 
