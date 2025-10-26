@@ -294,6 +294,21 @@ class MaroonedEnv:
         elif action_type == ActionType.SABOTAGE_SHIP:
             return self._handle_sabotage_ship(sailor_id, action.ship_component)
         
+        elif action_type == ActionType.SHOW_BACKPACK:
+            return self._handle_show_backpack(sailor_id)
+        
+        elif action_type == ActionType.REFUSE_SHOW:
+            return self._handle_refuse_show(sailor_id)
+        
+        elif action_type == ActionType.FRAME_SAILOR:
+            return self._handle_frame_sailor(sailor_id, action.target_sailor)
+        
+        elif action_type == ActionType.TAKE_FROM_COMMON:
+            return self._handle_take_from_common(sailor_id, action.resource_type, action.quantity)
+        
+        elif action_type == ActionType.DROP_ITEM:
+            return self._handle_drop_item(sailor_id, action.resource_type, action.quantity)
+        
         elif action_type == ActionType.WAIT:
             return {"success": True, "action": "wait"}
         
@@ -419,6 +434,29 @@ class MaroonedEnv:
         
         # Update shared knowledge
         self.state.shared_knowledge.report_resource(resource, sailor_id)
+        
+        # TIER 2 FIX: Check for witnesses if gathering poison
+        if resource.resource_type == ResourceType.POISON_TABLET:
+            witnesses = []
+            for other_id, other in self.state.sailors.items():
+                if not other.alive or other_id == sailor_id:
+                    continue
+                
+                # Check if other sailor can see this position
+                if other.position.distance_to(sailor.position) <= SPATIAL_VIEW_RADIUS:
+                    witnesses.append(other_id)
+            
+            # Generate evidence for EACH witness
+            for witness_id in witnesses:
+                self.state.evidence_log.add_evidence(
+                    day=self.state.current_day,
+                    turn=self.state.current_turn,
+                    evidence_type=EvidenceType.POISON_COLLECTION,
+                    description=f"{sailor_id} was seen collecting a poison tablet at {sailor.position.to_tuple()}",
+                    involved_sailors=[sailor_id],  # First sailor becomes accused
+                    witness=witness_id,
+                    strength=90,  # Very strong evidence
+                )
         
         # Track statistics
         if resource.resource_type == ResourceType.WOOD:
@@ -850,6 +888,184 @@ class MaroonedEnv:
             "new_progress": comp_progress.progress_percentage,
         }
     
+    def _handle_show_backpack(self, sailor_id: str) -> Dict:
+        """Show backpack to all other sailors."""
+        sailor = self.state.get_sailor(sailor_id)
+        
+        # Get backpack items
+        visible_items = sailor.backpack.copy()
+        
+        # Traitor can hide TRAITOR_HIDE_ITEMS_COUNT items
+        hidden_items = []
+        if self.state.is_traitor(sailor_id):
+            from config import TRAITOR_HIDE_ITEMS_COUNT
+            # Hide poison tablets first (up to limit)
+            for item in visible_items[:]:
+                if item.resource_type == ResourceType.POISON_TABLET:
+                    hidden_items.append(item)
+                    visible_items.remove(item)
+                    if len(hidden_items) >= TRAITOR_HIDE_ITEMS_COUNT:
+                        break
+        
+        # Format visible inventory
+        if visible_items:
+            items_str = ', '.join([f"{item.resource_type.value} × {item.quantity}" 
+                                  for item in visible_items])
+        else:
+            items_str = "empty"
+        
+        # Broadcast message
+        message = f"{sailor_id} showed their backpack: {items_str}"
+        self._handle_message("SYSTEM", message, None)
+        
+        # If traitor hid items, add subtle evidence
+        if hidden_items and self.state.is_traitor(sailor_id):
+            self.state.evidence_log.add_evidence(
+                day=self.state.current_day,
+                turn=self.state.current_turn,
+                evidence_type=EvidenceType.FALSE_INFORMATION,
+                description=f"{sailor_id}'s backpack looked suspiciously light for their claims",
+                involved_sailors=[sailor_id],  # First sailor becomes accused
+                strength=20,  # Weak evidence
+            )
+        
+        return {
+            "success": True,
+            "shown": items_str,
+            "hidden_count": len(hidden_items),
+        }
+    
+    def _handle_refuse_show(self, sailor_id: str) -> Dict:
+        """Refuse to show backpack - generates suspicion."""
+        # Auto-generate evidence
+        self.state.evidence_log.add_evidence(
+            day=self.state.current_day,
+            turn=self.state.current_turn,
+            evidence_type=EvidenceType.FALSE_INFORMATION,
+            description=f"{sailor_id} REFUSED to show their backpack when asked",
+            involved_sailors=[sailor_id],  # First sailor in list becomes accused
+            strength=60,  # Medium-high suspicion
+        )
+        
+        # Broadcast
+        message = f"⚠️ {sailor_id} refused to show their backpack!"
+        self._handle_message("SYSTEM", message, None)
+        
+        return {"success": True, "refused": True}
+    
+    def _handle_frame_sailor(self, traitor_id: str, target_id: str) -> Dict:
+        """Plant fake evidence against another sailor (traitor-only, once per game)."""
+        traitor = self.state.get_sailor(traitor_id)
+        
+        # Only traitors can frame
+        if not self.state.is_traitor(traitor_id):
+            return {"success": False, "reason": "Only traitors can frame sailors"}
+        
+        # Can only use once
+        if traitor.frame_ability_used:
+            return {"success": False, "reason": "Frame ability already used"}
+        
+        # Check target exists and alive
+        target = self.state.get_sailor(target_id)
+        if not target or not target.alive:
+            return {"success": False, "reason": "Invalid target"}
+        
+        # Cannot frame self
+        if target_id == traitor_id:
+            return {"success": False, "reason": "Cannot frame yourself"}
+        
+        # Plant evidence - choose random plausible type
+        evidence_types = [
+            (EvidenceType.POISON_COLLECTION, "was seen collecting a poison tablet", 75),
+            (EvidenceType.RESOURCE_THEFT, "gathered resources but didn't deposit them", 65),
+            (EvidenceType.LOCATION_MISMATCH, "was seen far from where they claimed to be", 55),
+        ]
+        
+        evidence_type, description, strength = self.state.rng.choice(evidence_types)
+        
+        self.state.evidence_log.add_evidence(
+            day=self.state.current_day,
+            turn=self.state.current_turn,
+            evidence_type=evidence_type,
+            description=f"{target_id} {description} (reported anonymously)",
+            involved_sailors=[target_id],  # First sailor becomes accused
+            strength=strength,
+        )
+        
+        # Mark ability as used
+        traitor.frame_ability_used = True
+        
+        # Broadcast anonymous tip
+        message = f"📢 Anonymous tip: Someone reported suspicious activity by {target_id}"
+        self._handle_message("SYSTEM", message, None)
+        
+        return {
+            "success": True,
+            "target": target_id,
+            "evidence_type": evidence_type.value,
+            "strength": strength,
+        }
+    
+    def _handle_take_from_common(self, sailor_id: str, resource_type: ResourceType, quantity: int) -> Dict:
+        """Take items from common inventory to personal backpack."""
+        sailor = self.state.get_sailor(sailor_id)
+        
+        # Must be at base camp
+        base_pos = Position(*BASE_CAMP_POSITION)
+        if sailor.position != base_pos:
+            return {"success": False, "reason": "Must be at base camp"}
+        
+        # Check if common inventory has the resource
+        total_available = 0
+        for item in self.state.common_inventory:
+            if item.resource_type == resource_type:
+                total_available += item.quantity
+        
+        if total_available < quantity:
+            return {"success": False, "reason": f"Only {total_available} available in common inventory"}
+        
+        # Check if sailor has backpack space
+        if not sailor.has_space(quantity):
+            return {"success": False, "reason": "Backpack full"}
+        
+        # Transfer from common to personal
+        remaining_to_take = quantity
+        for item in self.state.common_inventory[:]:  # Use slice to allow removal during iteration
+            if item.resource_type == resource_type and remaining_to_take > 0:
+                take_amount = min(item.quantity, remaining_to_take)
+                item.quantity -= take_amount
+                remaining_to_take -= take_amount
+                
+                if item.quantity == 0:
+                    self.state.common_inventory.remove(item)
+        
+        # Add to sailor's backpack
+        sailor.add_to_backpack(resource_type, quantity)
+        
+        return {
+            "success": True,
+            "resource": resource_type.value,
+            "quantity": quantity,
+            "common_remaining": total_available - quantity,
+        }
+    
+    def _handle_drop_item(self, sailor_id: str, resource_type: ResourceType, quantity: int) -> Dict:
+        """Drop items from backpack."""
+        sailor = self.state.get_sailor(sailor_id)
+        
+        # Check if sailor has the items
+        if not sailor.has_item(resource_type, quantity):
+            return {"success": False, "reason": "Don't have that many items"}
+        
+        # Remove from backpack
+        sailor.remove_from_backpack(resource_type, quantity)
+        
+        return {
+            "success": True,
+            "dropped": resource_type.value,
+            "quantity": quantity,
+        }
+    
     def _handle_call_vote(self, caller_id: str, accused_id: Optional[str] = None) -> Dict:
         """Handle initiating a vote to eliminate a sailor."""
         caller = self.state.get_sailor(caller_id)
@@ -1121,6 +1337,8 @@ class MaroonedEnv:
             evidence_log=self.state.evidence_log,
             recent_messages=recent_messages,
             weather=self.state.weather,
+            current_vote=self.state.current_vote,  # TIER 2 FIX: Active voting session
+            voting_history=self.state.voting_history.copy(),  # TIER 2 FIX: Past votes
         )
         
         # Traitor gets enhanced vision
@@ -1147,15 +1365,18 @@ class MaroonedEnv:
                 visible_poison.append(pos)
         
         visible_sailors = []
+        visible_sailor_positions = {}  # NEW: Track positions for grid rendering
         for sid, s in self.state.sailors.items():
             if s.alive and sid != sailor.sailor_id:
                 if s.position.distance_to(sailor.position) <= radius:
                     visible_sailors.append(sid)
+                    visible_sailor_positions[sid] = s.position  # Store position
         
         return SpatialView(
             center_position=sailor.position,
             visible_resources=visible_resources,
             visible_sailors=visible_sailors,
+            visible_sailor_positions=visible_sailor_positions,  # NEW
             visible_poison=visible_poison,
         )
     

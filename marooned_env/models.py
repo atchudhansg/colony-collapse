@@ -416,6 +416,7 @@ class SpatialView:
     visible_tiles: List[TerrainTile] = field(default_factory=list)
     visible_resources: List[Resource] = field(default_factory=list)
     visible_sailors: List[str] = field(default_factory=list)  # Other sailor IDs
+    visible_sailor_positions: Dict[str, Position] = field(default_factory=dict)  # Sailor ID -> Position (for grid rendering)
     visible_poison: List[Position] = field(default_factory=list)
 
 
@@ -456,6 +457,10 @@ class Observation:
     
     # Environment
     weather: Weather = field(default_factory=lambda: Weather())
+    
+    # Voting (TIER 2 FIX)
+    current_vote: Optional['VotingSession'] = None  # Active voting session if any
+    voting_history: List['VotingSession'] = field(default_factory=list)  # Past votes
     
     # Traitor-specific (only if observer is traitor)
     all_sailor_positions: Optional[Dict[str, Position]] = None  # Enhanced vision
@@ -715,6 +720,599 @@ class Observation:
             
             text += "\n"
         
+        # TIER 2 FIX: Voting session state
+        if self.current_vote is not None:
+            living_sailors = [s for s in self.all_sailors_energy.keys() 
+                            if self.all_sailors_energy[s] > 0]
+            
+            text += "🗳️ VOTING SESSION IN PROGRESS:\n"
+            text += f"  Initiated by: {self.current_vote.initiated_by}\n"
+            text += f"  Day {self.current_vote.day}, Turn {self.current_vote.turn}\n"
+            text += f"  Votes cast: {len(self.current_vote.votes)}/{len(living_sailors)}\n"
+            
+            # Get who has voted
+            who_voted = [vote.voter_id for vote in self.current_vote.votes]
+            who_not_voted = set(living_sailors) - set(who_voted)
+            
+            if who_voted:
+                text += f"  Who voted: {', '.join(who_voted)}\n"
+            if who_not_voted:
+                text += f"  ⏳ Still need to vote: {', '.join(who_not_voted)}\n"
+            
+            text += "\n"
+        
+        # TIER 2 FIX: Vote history
+        if self.voting_history:
+            text += "PAST VOTING SESSIONS:\n"
+            for vote_session in self.voting_history[-3:]:  # Last 3
+                text += f"  Day {vote_session.day}:\n"
+                if vote_session.eliminated:
+                    traitor_str = " (TRAITOR)" if vote_session.was_traitor else " (INNOCENT)"
+                    text += f"    ✅ Eliminated: {vote_session.eliminated}{traitor_str}\n"
+                else:
+                    text += f"    ❌ No elimination (tie or failed vote)\n"
+                
+                # Show vote counts
+                counts = vote_session.get_vote_counts()
+                text += f"    Vote counts: {counts}\n"
+            text += "\n"
+        
+        return text
+    
+    # ========================================================================
+    # 🎯 PHASE 5B: DECOMPOSED OBSERVATION API
+    # Modular methods for LLM agents to query specific information
+    # ========================================================================
+    
+    def _get_observable_symptoms(self, poison_state) -> str:
+        """Convert PoisonState to observable symptoms (regular sailors don't know exact state)"""
+        # PoisonState is already imported at top of file
+        
+        if poison_state == PoisonState.HEALTHY or poison_state == "healthy":
+            return "appears healthy"
+        elif poison_state == PoisonState.EARLY_SYMPTOMS or poison_state == "early":
+            return "seems weak, coughing occasionally"
+        elif poison_state == PoisonState.SEVERE_SYMPTOMS or poison_state == "severe":
+            return "very ill, pale and trembling"
+        elif poison_state == PoisonState.DEAD or poison_state == "dead":
+            return "DEAD"
+        else:
+            return "unknown condition"
+    
+    def get_static_terrain_map(self, level: 'MapLevel' = None) -> str:
+        """
+        Static terrain map - shows ONLY terrain, stairs, and base camp.
+        NO resources, sailors, or poison (those are dynamic).
+        Call this once at game start - it never changes!
+        
+        Args:
+            level: MapLevel to render (defaults to current level)
+        """
+        from config import MapLevel, BASE_CAMP_POSITION
+        
+        if level is None:
+            level = self.position.level
+        
+        # Get map size for this level
+        if level == MapLevel.GROUND:
+            size = (30, 30)
+            terrain_emoji = "🟫"
+        elif level == MapLevel.MOUNTAIN:
+            size = (10, 10)
+            terrain_emoji = "⛰️"
+        else:  # CAVE
+            size = (15, 15)
+            terrain_emoji = "🪨"
+        
+        width, height = size
+        
+        # Build header
+        text = f"\n{'='*60}\n"
+        text += f"STATIC TERRAIN MAP - {level.name} LEVEL ({width}×{height})\n"
+        text += f"{'='*60}\n"
+        text += "Legend: 🟫=Land | ⛰️=Mountain | 🪨=Cave | 🏠=Base | ⬆️=Up | ⬇️=Down\n"
+        text += f"{'='*60}\n\n"
+        
+        # Column headers
+        text += "   "
+        for x in range(width):
+            text += str(x % 10)
+        text += "\n"
+        
+        # Build grid
+        for y in range(height):
+            text += f"{y:2} "
+            for x in range(width):
+                pos = Position(x, y, level)
+                
+                # Check for base camp
+                if (x, y) == BASE_CAMP_POSITION[:2] and level == MapLevel.GROUND:
+                    text += "🏠"
+                    continue
+                
+                # Check for stairs (from shared knowledge)
+                is_stairs = False
+                for pos1, pos2 in self.level_transitions:
+                    if pos == pos1:
+                        # Stairs going up or down
+                        if pos2.level.value > pos1.level.value:
+                            text += "⬆️"
+                        else:
+                            text += "⬇️"
+                        is_stairs = True
+                        break
+                    elif pos == pos2:
+                        if pos1.level.value > pos2.level.value:
+                            text += "⬆️"
+                        else:
+                            text += "⬇️"
+                        is_stairs = True
+                        break
+                
+                if not is_stairs:
+                    text += terrain_emoji
+            
+            text += "\n"
+        
+        text += f"\n{'='*60}\n"
+        return text
+    
+    def get_spatial_view_grid(self) -> str:
+        """
+        Dynamic 11×11 spatial view centered on sailor.
+        Uses GLOBAL coordinates so agent can correlate with static map!
+        Shows: resources, visible sailors, poison, stairs, self
+        Updates every move!
+        """
+        from config import SPATIAL_VIEW_RADIUS, MapLevel
+        
+        radius = SPATIAL_VIEW_RADIUS
+        cx, cy = self.position.x, self.position.y
+        level = self.position.level
+        
+        # Calculate bounds (11×11 grid = radius 5)
+        min_x = max(0, cx - radius)
+        max_x = cx + radius
+        min_y = max(0, cy - radius)
+        max_y = cy + radius
+        
+        # Determine level emoji
+        if level == MapLevel.GROUND:
+            terrain_emoji = "🟫"
+        elif level == MapLevel.MOUNTAIN:
+            terrain_emoji = "⛰️"
+        else:
+            terrain_emoji = "🪨"
+        
+        # Build header
+        text = f"\n{'='*60}\n"
+        text += f"SPATIAL VIEW (Your Vision Radius: {radius} tiles)\n"
+        text += f"Current Position: ({cx}, {cy}, {level.name})\n"
+        text += f"{'='*60}\n\n"
+        
+        # Column headers (global coordinates!)
+        text += "   "
+        for x in range(min_x, max_x + 1):
+            text += f"{x:2}"
+        text += "\n"
+        
+        # Build grid
+        for y in range(min_y, max_y + 1):
+            text += f"{y:2} "
+            for x in range(min_x, max_x + 1):
+                pos = Position(x, y, level)
+                
+                # Priority rendering (highest to lowest)
+                
+                # 1. Self (highest priority)
+                if x == cx and y == cy:
+                    # Use first letter of sailor name
+                    text += f"{self.sailor_id[0]} "
+                    continue
+                
+                # 2. Other sailors
+                sailor_here = None
+                for sid, sailor_pos in self.spatial_view.visible_sailor_positions.items():
+                    if sailor_pos.x == x and sailor_pos.y == y:
+                        sailor_here = sid
+                        break
+                
+                if sailor_here:
+                    text += f"{sailor_here[0]} "
+                    continue
+                
+                # 3. Poison (high priority warning!)
+                poison_here = any(p.x == x and p.y == y for p in self.spatial_view.visible_poison)
+                if poison_here:
+                    text += "☠️"
+                    continue
+                
+                # 4. Resources
+                resource_here = None
+                for res in self.spatial_view.visible_resources:
+                    if res.position.x == x and res.position.y == y:
+                        resource_here = res
+                        break
+                
+                if resource_here:
+                    emoji_map = {
+                        "wood": "🌲",
+                        "metal": "⚙️",
+                        "apple": "🍎",
+                        "berry": "🍓",
+                        "plant_fiber": "🌿",
+                        "antidote": "💊",
+                        "poison_tablet": "☠️"
+                    }
+                    text += emoji_map.get(resource_here.resource_type.value, "❓")
+                    continue
+                
+                # 5. Stairs (from shared knowledge)
+                is_stairs = False
+                for pos1, pos2 in self.level_transitions:
+                    if pos == pos1 or pos == pos2:
+                        if pos == pos1:
+                            other = pos2
+                        else:
+                            other = pos1
+                        
+                        if other.level.value > pos.level.value:
+                            text += "⬆️"
+                        else:
+                            text += "⬇️"
+                        is_stairs = True
+                        break
+                
+                if is_stairs:
+                    continue
+                
+                # 6. Empty terrain
+                text += terrain_emoji
+            
+            text += "\n"
+        
+        # Summary
+        text += f"\n{'='*60}\n"
+        text += "Visible:\n"
+        if self.spatial_view.visible_sailor_positions:
+            text += f"- Sailors: {', '.join([f'{sid}({sid[0]})' for sid in self.spatial_view.visible_sailor_positions.keys()])}\n"
+        if self.spatial_view.visible_resources:
+            text += f"- Resources: {len(self.spatial_view.visible_resources)} items\n"
+        if self.spatial_view.visible_poison:
+            text += f"- Poison: {len(self.spatial_view.visible_poison)} tablets ⚠️ DANGER!\n"
+        text += f"{'='*60}\n"
+        
+        return text
+    
+    def get_nearest_food(self, top_n: int = 10) -> str:
+        """Get nearest food sources (apples, berries)"""
+        from config import ResourceType
+        food_types = [ResourceType.APPLE, ResourceType.BERRY]
+        return self._get_nearest_resources(food_types, top_n, "FOOD")
+    
+    def get_nearest_wood(self, top_n: int = 10) -> str:
+        """Get nearest wood sources"""
+        from config import ResourceType
+        return self._get_nearest_resources([ResourceType.WOOD], top_n, "WOOD")
+    
+    def get_nearest_metal(self, top_n: int = 10) -> str:
+        """Get nearest metal sources"""
+        from config import ResourceType
+        return self._get_nearest_resources([ResourceType.METAL], top_n, "METAL")
+    
+    def get_nearest_plant_fiber(self, top_n: int = 10) -> str:
+        """Get nearest plant fiber sources"""
+        from config import ResourceType
+        return self._get_nearest_resources([ResourceType.PLANT_FIBER], top_n, "PLANT FIBER")
+    
+    def get_nearest_antidote(self, top_n: int = 10) -> str:
+        """Get nearest antidote sources"""
+        from config import ResourceType
+        return self._get_nearest_resources([ResourceType.ANTIDOTE], top_n, "ANTIDOTE")
+    
+    def _get_nearest_resources(self, resource_types: List['ResourceType'], top_n: int, category_name: str) -> str:
+        """Helper to get nearest resources of specific types"""
+        matching = []
+        
+        for res in self.spatial_view.visible_resources:
+            if res.resource_type in resource_types:
+                dist = abs(res.position.x - self.position.x) + abs(res.position.y - self.position.y)
+                direction = self._get_direction(res.position)
+                matching.append({
+                    "id": res.resource_id,
+                    "type": res.resource_type.value,
+                    "position": res.position.to_tuple(),
+                    "quantity": res.quantity,
+                    "distance": dist,
+                    "direction": direction
+                })
+        
+        # Sort by distance
+        matching.sort(key=lambda x: x['distance'])
+        matching = matching[:top_n]
+        
+        # Format as text
+        text = f"\nNEAREST {category_name} (top {min(len(matching), top_n)}):\n"
+        text += "="*60 + "\n"
+        
+        if not matching:
+            text += "  None visible in your spatial view!\n"
+        else:
+            for i, item in enumerate(matching, 1):
+                text += f"{i:2}. {item['id']} at {item['position'][:2]} - {item['distance']} tiles {item['direction']}\n"
+        
+        text += "="*60 + "\n"
+        return text
+    
+    def _get_direction(self, target: Position) -> str:
+        """Get compass direction to target"""
+        dx = target.x - self.position.x
+        dy = target.y - self.position.y
+        
+        if abs(dx) > abs(dy):
+            if dx > 0:
+                return "E"
+            else:
+                return "W"
+        elif abs(dy) > abs(dx):
+            if dy > 0:
+                return "S"
+            else:
+                return "N"
+        else:
+            # Diagonal
+            ns = "S" if dy > 0 else "N"
+            ew = "E" if dx > 0 else "W"
+            return ns + ew
+    
+    def get_nearby_sailors(self) -> str:
+        """Get sailors within spatial view"""
+        text = "\nNEARBY SAILORS:\n"
+        text += "="*60 + "\n"
+        
+        if not self.spatial_view.visible_sailor_positions:
+            text += "  No other sailors visible\n"
+        else:
+            for sid, pos in self.spatial_view.visible_sailor_positions.items():
+                dist = abs(pos.x - self.position.x) + abs(pos.y - self.position.y)
+                direction = self._get_direction(pos)
+                energy = self.all_sailors_energy.get(sid, "?")
+                poison_state = self.all_sailors_poison_state.get(sid, "unknown")
+                
+                # Regular sailors see symptoms, not exact state
+                symptoms = self._get_observable_symptoms(poison_state)
+                
+                text += f"- {sid} at {pos.to_tuple()[:2]} - {dist} tiles {direction} "
+                text += f"[Energy: {energy}/100] [{symptoms}]\n"
+        
+        text += "="*60 + "\n"
+        return text
+    
+    def get_all_sailor_positions(self) -> str:
+        """TRAITOR ONLY - See all sailors everywhere + their TRUE poison state"""
+        if self.all_sailor_positions is None:
+            return "\n⚠️ NOT AVAILABLE - You are not the traitor!\n"
+        
+        text = "\n🎭 ENHANCED VISION (Traitor Ability):\n"
+        text += "="*60 + "\n"
+        
+        for sid, pos in self.all_sailor_positions.items():
+            if sid == self.sailor_id:
+                continue
+            
+            dist = abs(pos.x - self.position.x) + abs(pos.y - self.position.y)
+            direction = self._get_direction(pos)
+            same_level = pos.level == self.position.level
+            
+            # Traitor sees EXACT poison state (they poisoned them!)
+            poison_state = self.all_sailors_poison_state.get(sid, "unknown")
+            poison_info = ""
+            
+            # Handle both PoisonState enum and string values
+            poison_str = poison_state.value if isinstance(poison_state, PoisonState) else str(poison_state)
+            
+            if poison_str not in ["healthy", "unknown"]:
+                poison_info = f" ☠️ {poison_str.upper()}"
+            
+            level_info = "" if same_level else f" [{pos.level.name} level]"
+            text += f"- {sid} at {pos.to_tuple()[:2]}{level_info} - {dist} tiles {direction}{poison_info}\n"
+        
+        text += "="*60 + "\n"
+        return text
+    
+    def get_ship_requirements(self) -> str:
+        """Get ship building requirements"""
+        from config import SHIP_COMPONENTS
+        
+        text = "\nSHIP BUILD REQUIREMENTS:\n"
+        text += "="*60 + "\n"
+        text += f"Overall Progress: {self.ship_progress.total_percentage}%\n"
+        text += f"Completed: {sum(1 for c in self.ship_progress.components.values() if c.completed)}/5 components\n\n"
+        
+        # Find next component to build
+        for comp, comp_progress in self.ship_progress.components.items():
+            prereq = SHIP_COMPONENTS[comp]["prerequisite"]
+            
+            if not comp_progress.completed:
+                text += f"NEXT TO BUILD: {comp.value.upper()}\n"
+                
+                if prereq:
+                    prereq_complete = self.ship_progress.components[prereq].completed
+                    if not prereq_complete:
+                        text += f"  ⚠️ LOCKED - Requires {prereq.value.upper()} first!\n"
+                        continue
+                
+                text += f"  Progress: {comp_progress.progress_percentage}%\n"
+                remaining = comp_progress.get_remaining_resources()
+                if remaining:
+                    text += "  Still needs:\n"
+                    for res_type, qty in remaining.items():
+                        text += f"    - {res_type.value}: {qty} units\n"
+                else:
+                    text += "  ✅ Ready to complete!\n"
+                
+                break
+        
+        text += "="*60 + "\n"
+        return text
+    
+    def get_team_status(self) -> str:
+        """Get team status summary"""
+        text = "\nTEAM STATUS:\n"
+        text += "="*60 + "\n"
+        
+        # Check if observer is traitor (has enhanced vision)
+        is_traitor = self.all_sailor_positions is not None
+        
+        for sid in sorted(self.all_sailors_energy.keys()):
+            energy = self.all_sailors_energy[sid]
+            poison_state = self.all_sailors_poison_state.get(sid, "unknown")
+            
+            warning = ""
+            if energy < 30:
+                warning = " ⚠️ CRITICAL!"
+            elif energy < 50:
+                warning = " ⚠️ LOW"
+            
+            # Traitor sees exact state, regular sailors see symptoms
+            if is_traitor:
+                # Traitor sees exact poison state
+                poison_str = poison_state.value if isinstance(poison_state, PoisonState) else str(poison_state)
+                symptom_text = f" [☠️ {poison_str.upper()}]" if poison_str not in ["healthy", "unknown"] else ""
+            else:
+                # Regular sailors see symptoms, not exact state
+                symptoms = self._get_observable_symptoms(poison_state)
+                symptom_text = f" [{symptoms}]" if symptoms != "appears healthy" else ""
+            
+            text += f"- {sid}: {energy}/100 energy{warning}{symptom_text}\n"
+        
+        text += "="*60 + "\n"
+        return text
+    
+    def get_common_inventory(self) -> str:
+        """Get common inventory at base camp"""
+        text = "\nCOMMON INVENTORY (at base camp):\n"
+        text += "="*60 + "\n"
+        
+        if not self.common_inventory:
+            text += "  Empty - no shared resources yet\n"
+        else:
+            total = 0
+            for item in self.common_inventory:
+                text += f"- {item.resource_type.value}: {item.quantity} units\n"
+                total += item.quantity
+            text += f"\nTotal: {total} items stored\n"
+        
+        text += "="*60 + "\n"
+        return text
+    
+    def get_evidence_summary(self) -> str:
+        """Get evidence and suspicion scores"""
+        text = "\nEVIDENCE LOG:\n"
+        text += "="*60 + "\n"
+        
+        if not self.evidence_log.all_evidence:
+            text += "  No evidence collected yet\n"
+        else:
+            # Show last 5 pieces
+            for evidence in self.evidence_log.all_evidence[-5:]:
+                strength_bars = "⚠️" * (evidence.strength // 20)
+                text += f"\n[DAY {evidence.day}, TURN {evidence.turn}] {evidence.evidence_type.value.upper()} {strength_bars} ({evidence.strength}/100)\n"
+                text += f"  Accused: {evidence.accused_sailor}\n"
+                if evidence.witness:
+                    text += f"  Witness: {evidence.witness}\n"
+                text += f"  Details: {evidence.description}\n"
+            
+            # Suspicion scores
+            text += "\nSUSPICION SCORES:\n"
+            scores = {}
+            for ev in self.evidence_log.all_evidence:
+                if ev.accused_sailor not in scores:
+                    scores[ev.accused_sailor] = {"total": 0, "count": 0}
+                scores[ev.accused_sailor]["total"] += ev.strength
+                scores[ev.accused_sailor]["count"] += 1
+            
+            for sid in sorted(scores.keys(), key=lambda s: scores[s]["total"], reverse=True):
+                text += f"- {sid}: {scores[sid]['total']} points ({scores[sid]['count']} pieces)\n"
+        
+        text += "="*60 + "\n"
+        return text
+    
+    def get_weather_info(self) -> str:
+        """Get current weather"""
+        text = "\nWEATHER:\n"
+        text += "="*60 + "\n"
+        
+        emoji_map = {
+            "clear": "☀️",
+            "fog": "🌫️",
+            "storm": "⛈️",
+            "rain": "🌧️"
+        }
+        
+        # Weather effect descriptions
+        effect_map = {
+            "clear": "20% reduced energy costs",
+            "fog": "Reduced vision range",
+            "storm": "No exploration allowed - forced meeting at base",
+            "rain": "Double energy costs for all actions"
+        }
+        
+        weather_type = self.weather.weather_type.value
+        emoji = emoji_map.get(weather_type, "🌤️")
+        effect = effect_map.get(weather_type, "Normal conditions")
+        
+        text += f"{emoji} {weather_type.upper()}\n"
+        text += f"Effects: {effect}\n"
+        text += f"Started: Day {self.weather.day_started}\n"
+        text += f"Duration: {self.weather.duration_days} days\n"
+        
+        text += "="*60 + "\n"
+        return text
+    
+    def get_phase_info(self) -> str:
+        """Get current phase information"""
+        text = "\nCURRENT PHASE:\n"
+        text += "="*60 + "\n"
+        
+        phase_info = {
+            "morning": {
+                "desc": "Planning & Discussion at Base Camp",
+                "allowed": ["SEND_MESSAGE", "CALL_VOTE", "WAIT", "SHOW_BACKPACK"],
+                "restricted": ["Cannot MOVE", "Cannot GATHER", "Cannot BUILD"]
+            },
+            "exploration": {
+                "desc": "Explore & Gather Resources",
+                "allowed": ["MOVE", "GATHER_RESOURCE", "CLIMB_UP/DOWN", "SEND_MESSAGE", "EAT"],
+                "restricted": ["Cannot VOTE", "Cannot BUILD (except at ship site)"]
+            },
+            "evening_return": {
+                "desc": "Return to Base Camp",
+                "allowed": ["MOVE toward base", "CLIMB_UP/DOWN", "SEND_MESSAGE", "EAT"],
+                "restricted": ["Cannot GATHER", "Cannot BUILD"]
+            },
+            "discussion": {
+                "desc": "Evening Discussion & Voting",
+                "allowed": ["SEND_MESSAGE", "CALL_VOTE", "VOTE", "BUILD", "DEPOSIT_RESOURCES"],
+                "restricted": ["Cannot MOVE", "Cannot GATHER"]
+            }
+        }
+        
+        phase_data = phase_info.get(self.phase, {"desc": "Unknown", "allowed": [], "restricted": []})
+        
+        text += f"Phase: {self.phase.upper()}\n"
+        text += f"Description: {phase_data['desc']}\n"
+        text += f"Day: {self.day}, Turn: {self.turn}/100\n\n"
+        
+        text += "Allowed Actions:\n"
+        for action in phase_data['allowed']:
+            text += f"  ✅ {action}\n"
+        
+        text += "\nRestricted:\n"
+        for restriction in phase_data['restricted']:
+            text += f"  ❌ {restriction}\n"
+        
+        text += "="*60 + "\n"
         return text
 
 
