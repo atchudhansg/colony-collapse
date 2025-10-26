@@ -629,8 +629,17 @@ def _create_world_map(rng: random.Random) -> WorldMap:
         
         for resource_type, count in resource_types.items():
             for _ in range(count):
-                x = rng.randint(0, width - 1)
-                y = rng.randint(0, height - 1)
+                # Find a valid position (not at staircase position)
+                while True:
+                    x = rng.randint(0, width - 1)
+                    y = rng.randint(0, height - 1)
+                    
+                    # Reserve (0,0) for staircases on MOUNTAIN and CAVE levels
+                    if (level in [MapLevel.MOUNTAIN, MapLevel.CAVE]) and x == 0 and y == 0:
+                        continue  # Skip (0,0) - reserved for stairs
+                    
+                    break  # Valid position found
+                
                 pos = Position(x, y, level)
                 
                 resource_id = f"{resource_type.value.upper()}_{resource_id_counter}"
@@ -645,8 +654,17 @@ def _create_world_map(rng: random.Random) -> WorldMap:
         width, height = MAP_SIZES[level]
         
         for _ in range(count):
-            x = rng.randint(0, width - 1)
-            y = rng.randint(0, height - 1)
+            # Find a valid position (not at staircase position)
+            while True:
+                x = rng.randint(0, width - 1)
+                y = rng.randint(0, height - 1)
+                
+                # Reserve (0,0) for staircases on MOUNTAIN and CAVE levels
+                if (level in [MapLevel.MOUNTAIN, MapLevel.CAVE]) and x == 0 and y == 0:
+                    continue  # Skip (0,0) - reserved for stairs
+                
+                break  # Valid position found
+            
             pos = Position(x, y, level)
             
             poison_id = f"POISON_{poison_id_counter}"
@@ -654,48 +672,35 @@ def _create_world_map(rng: random.Random) -> WorldMap:
             
             world.poison_tablets[poison_id] = pos
     
-    # Add level transitions - RANDOMIZED for each episode!
-    # Each level has 3 entry/exit points, randomly positioned
+    # Add level transitions - FIXED positions for consistency
+    # Mountain: ONLY ONE staircase at (0,0) going DOWN
+    # Cave: ONLY ONE staircase at (0,0) going UP
+    # Ground: Has corresponding entry points at random positions
     
-    # Mountain transitions (3 random entry points from ground)
     ground_width, ground_height = MAP_SIZES[MapLevel.GROUND]
-    mountain_width, mountain_height = MAP_SIZES[MapLevel.MOUNTAIN]
     
-    mountain_entries = []
-    for i in range(3):
-        # Random position on ground level
-        ground_x = rng.randint(0, ground_width - 1)
-        ground_y = rng.randint(0, ground_height - 1)
-        
-        # Random entrance on mountain level
-        mountain_x = rng.randint(0, mountain_width - 1)
-        mountain_y = rng.randint(0, mountain_height - 1)
-        
-        mountain_entries.append((
-            Position(ground_x, ground_y, MapLevel.GROUND),
-            Position(mountain_x, mountain_y, MapLevel.MOUNTAIN)
-        ))
+    # Mountain transition: Ground level random position <-> Mountain (0,0)
+    # This creates stairs UP on ground level, and stairs DOWN on mountain level
+    ground_to_mountain_x = rng.randint(0, ground_width - 1)
+    ground_to_mountain_y = rng.randint(0, ground_height - 1)
     
-    # Cave transitions (3 random entry points from ground)
-    cave_width, cave_height = MAP_SIZES[MapLevel.CAVE]
+    mountain_entry = (
+        Position(ground_to_mountain_x, ground_to_mountain_y, MapLevel.GROUND),  # Stairs UP on ground
+        Position(0, 0, MapLevel.MOUNTAIN)  # Stairs DOWN at (0,0) on mountain
+    )
     
-    cave_entries = []
-    for i in range(3):
-        # Random position on ground level
-        ground_x = rng.randint(0, ground_width - 1)
-        ground_y = rng.randint(0, ground_height - 1)
-        
-        # Random entrance on cave level
-        cave_x = rng.randint(0, cave_width - 1)
-        cave_y = rng.randint(0, cave_height - 1)
-        
-        cave_entries.append((
-            Position(ground_x, ground_y, MapLevel.GROUND),
-            Position(cave_x, cave_y, MapLevel.CAVE)
-        ))
+    # Cave transition: Ground level random position <-> Cave (0,0)
+    # This creates stairs DOWN on ground level, and stairs UP on cave level
+    ground_to_cave_x = rng.randint(0, ground_width - 1)
+    ground_to_cave_y = rng.randint(0, ground_height - 1)
     
-    world.level_transitions.extend(mountain_entries)
-    world.level_transitions.extend(cave_entries)
+    cave_entry = (
+        Position(ground_to_cave_x, ground_to_cave_y, MapLevel.GROUND),  # Stairs DOWN on ground
+        Position(0, 0, MapLevel.CAVE)  # Stairs UP at (0,0) on cave
+    )
+    
+    world.level_transitions.append(mountain_entry)
+    world.level_transitions.append(cave_entry)
     
     return world
 

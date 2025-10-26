@@ -289,28 +289,34 @@ class MaroonedEnv:
         sailor = self.state.get_sailor(sailor_id)
         current_pos = sailor.position
         
-        # Determine target level
-        from config import MapLevel
-        if direction == ActionType.CLIMB_UP:
-            if current_pos.level == MapLevel.GROUND:
-                target_level = MapLevel.MOUNTAIN
-            elif current_pos.level == MapLevel.CAVE:
-                target_level = MapLevel.GROUND
-            else:
-                return {"success": False, "reason": "Already at highest level"}
-            energy_cost = ENERGY_COST_CLIMB_UP
-        else:  # CLIMB_DOWN
-            if current_pos.level == MapLevel.MOUNTAIN:
-                target_level = MapLevel.GROUND
-            elif current_pos.level == MapLevel.GROUND:
-                target_level = MapLevel.CAVE
-            else:
-                return {"success": False, "reason": "Already at lowest level"}
-            energy_cost = ENERGY_COST_CLIMB_DOWN
+        # Find all available transitions from current position
+        available_transitions = []
+        for pos1, pos2 in self.state.world_map.level_transitions:
+            if pos1 == current_pos:
+                available_transitions.append((pos2, pos2.level.value > current_pos.level.value))
+            elif pos2 == current_pos:
+                available_transitions.append((pos1, pos1.level.value > current_pos.level.value))
         
-        # Check if transition exists at this location
-        if not self.state.world_map.can_transition_level(current_pos, target_level):
+        if not available_transitions:
             return {"success": False, "reason": "No stairs/entrance here"}
+        
+        # Determine if we want to go up or down based on action
+        want_to_go_up = (direction == ActionType.CLIMB_UP)
+        
+        # Find matching transition
+        new_pos = None
+        for dest_pos, is_upward in available_transitions:
+            if is_upward == want_to_go_up:
+                new_pos = dest_pos
+                break
+        
+        if new_pos is None:
+            direction_str = "up" if want_to_go_up else "down"
+            available_dir = "up" if available_transitions[0][1] else "down"
+            return {"success": False, "reason": f"These stairs go {available_dir}, not {direction_str}"}
+        
+        # Determine energy cost based on direction
+        energy_cost = ENERGY_COST_CLIMB_UP if want_to_go_up else ENERGY_COST_CLIMB_DOWN
         
         # Apply traitor energy bonus
         if self.state.is_traitor(sailor_id):
@@ -320,24 +326,13 @@ class MaroonedEnv:
         if not self.state.consume_energy(sailor_id, energy_cost):
             return {"success": False, "reason": "Not enough energy"}
         
-        # Find the actual transition position on the new level
-        new_pos = None
-        for pos1, pos2 in self.state.world_map.level_transitions:
-            if pos1 == current_pos and pos2.level == target_level:
-                new_pos = pos2
-                break
-            elif pos2 == current_pos and pos1.level == target_level:
-                new_pos = pos1
-                break
-        
-        if new_pos is None:
-            return {"success": False, "reason": "No valid transition found"}
-        
+        # Update sailor's position to the new level
         sailor.position = new_pos
         
         return {
             "success": True,
-            "new_level": target_level.value,
+            "new_level": new_pos.level.name,
+            "new_position": sailor.position.to_tuple(),
             "energy_cost": energy_cost,
         }
     
@@ -1144,7 +1139,7 @@ class MaroonedEnv:
             elif resource.resource_type in [ResourceType.APPLE, ResourceType.BERRY]:
                 grid[y][x] = '🍎' if use_emoji else 'F'
             elif resource.resource_type == ResourceType.ANTIDOTE_HERB:
-                grid[y][x] = '🌿' if use_emoji else 'A'
+                grid[y][x] = '🌿' if use_emoji else 'H'  # Changed from 'A' to 'H' for Herb to avoid collision with Alice
         
         # Mark poison tablets
         for poison_id, pos in self.state.world_map.poison_tablets.items():
@@ -1169,14 +1164,19 @@ class MaroonedEnv:
         if base_pos.level == level:
             grid[base_pos.y][base_pos.x] = '🏠' if use_emoji else 'B'
         
-        # Count sailors at each position
+        # Count sailors at each position ON THIS LEVEL ONLY
         sailor_positions = {}
         for sailor_id, sailor in self.state.sailors.items():
-            if sailor.alive and sailor.position.level == level:
-                pos_key = (sailor.position.x, sailor.position.y)
-                if pos_key not in sailor_positions:
-                    sailor_positions[pos_key] = []
-                sailor_positions[pos_key].append(sailor_id)
+            if not sailor.alive:
+                continue
+            # Only show sailors that are on the current level being rendered
+            if sailor.position.level != level:
+                continue
+            
+            pos_key = (sailor.position.x, sailor.position.y)
+            if pos_key not in sailor_positions:
+                sailor_positions[pos_key] = []
+            sailor_positions[pos_key].append(sailor_id)
         
         # Mark sailors (overwrites everything else)
         for (x, y), sailors_here in sailor_positions.items():
@@ -1200,7 +1200,7 @@ class MaroonedEnv:
             result += "Legend: 🟫 land | 🌲 wood | ⚙️ metal | 🍎 food | 🌿 antidote | ☠️ poison\n"
             result += "        ⬆️ stairs up | ⬇️ stairs down | 🏠 base | A/B/C/D/E sailors | 5👥 group\n\n"
         else:
-            result += "Legend: . land | W wood | M metal | F food | A antidote | P poison\n"
+            result += "Legend: . land | W wood | M metal | F food | H antidote | P poison\n"
             result += "        ^ stairs up | v stairs down | B base camp | A/B/C/D/E sailors | # count\n\n"
         
         # Add column numbers (only for smaller maps)
