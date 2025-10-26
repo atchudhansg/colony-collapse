@@ -21,7 +21,7 @@ def test_map_all_walkable_at_spawn():
         grid = env.state.world_map.terrain[level]
         for y, row in enumerate(grid):
             for x, tile in enumerate(row):
-                assert tile.x == x and tile.y == y, f"Tile coordinates mismatch at ({x},{y},{level})"
+                assert tile.position.x == x and tile.position.y == y, f"Tile coordinates mismatch at ({x},{y},{level})"
     print("All tile coordinates valid and accessible in their row/col.")
 
 def test_stairs_and_transitions():
@@ -46,7 +46,7 @@ def test_map_boundaries():
         # Top-left and bottom-right corners
         for (x, y) in [(0,0), (w-1, h-1)]:
             tile = grid[y][x]
-            assert tile.x == x and tile.y == y, f"Boundary mismatch in {level}: ({x},{y})"
+            assert tile.position.x == x and tile.position.y == y, f"Boundary mismatch in {level}: ({x},{y})"
             assert tile.walkable, f"Boundary tile not walkable in {level}: ({x},{y})"
     print("All map edge/corner tiles are valid and walkable.")
 
