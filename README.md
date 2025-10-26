@@ -1,251 +1,229 @@
-# 🏴‍☠️ MAROONED - Pirate Island Survival Game
 
-**A multi-agent deception environment for reinforcement learning research**
+# MAROONED — Pirate Island Survival Game
 
-> *Pirates of the Caribbean meets Alice in Borderland meets Among Us*
+### *A Multi-Agent Deception Environment for Reinforcement Learning Research*
 
----
-
-## 🎮 Game Overview
-
-**MAROONED** is a novel multi-agent RL environment where 5 AI sailors are shipwrecked on a mysterious multi-level island. They have 100 days to gather resources, rebuild their ship, and escape. But there's a catch: **one sailor is a traitor** secretly sabotaging their efforts through poison, lies, and misdirection.
-
-### Core Challenges
-
-- **Long-horizon planning**: 100 days × 100 turns = 10,000+ decisions
-- **Deception & detection**: Traitor must lie convincingly; honest sailors must catch them
-- **Cooperation under uncertainty**: Work together despite knowing someone is sabotaging
-- **Natural language communication**: All coordination happens through text messages
-- **Resource management**: Balance exploration, gathering, survival, and building
-- **Multi-level exploration**: Navigate 3D island with mountains, ground, and caves
+> *“Pirates of the Caribbean meets Alice in Borderland meets Among Us.”*
+>
+> *A sandbox of deception, cooperation, and long-horizon reasoning.*
 
 ---
 
-## 🗺️ The Island
+## 1. Overview
 
-### Map Structure
+**MAROONED** is a novel **multi-agent reinforcement learning (RL)** environment that simulates survival, deception, and trust on a mysterious multi-level island.
+
+Five AI sailors are shipwrecked with a shared mission: gather resources, rebuild their ship, and escape within  **100 in-game days** .
+
+One sailor, however, hides a secret — a **traitor** intent on sabotaging the mission from within.
+
+### Key Features
+
+* **Long-Horizon Planning** – 100 days × 100 turns = 10,000+ sequential decisions.
+* **Deception & Detection** – Traitor must lie convincingly; others must infer truth.
+* **Language-Based Negotiation** – All communication occurs through natural-language messages.
+* **Resource Management** – Explore, forage, craft, and survive cooperatively.
+* **Hidden-Role Uncertainty** – Everyone knows a traitor exists, but not who it is.
+* **Multi-Layer Map** – Mountain peaks, beach level, and subterranean caves — each with unique resources and risks.
+
+---
+
+## 2. The Island
+
+### 2.1 Topography
 
 ```
-LEVEL +2 (MOUNTAIN PEAKS):
-- 10×10 tiles
-- Rare resources: antidote herbs, special metals
-- High energy cost to reach
+LEVEL +2 — Mountain Peaks (10×10)
+   Rare metals, antidote herbs, low oxygen
+   Highest energy cost; harsh but rewarding
 
-LEVEL 0 (GROUND/BEACH):
-- 30×30 tiles
-- Base camp & ship reconstruction site
-- Common resources: wood, metal, food
+LEVEL  0 — Ground / Beach (30×30)
+   Central hub for shipbuilding and storage
+   Common resources: wood, metal, fruit
 
-LEVEL -1 (CAVES):
-- 15×15 tiles
-- Dark environment (reduced vision)
-- Unique resources: crystals, mushrooms
+LEVEL –1 — Caves (15×15)
+   Crystals, mushrooms, fog of war
+   Dangerous navigation, limited visibility
 ```
 
-### Resources
+### 2.2 Resources
 
-- **Building Materials**: Wood, metal, plant fibers
-- **Food**: Apples, berries, mushrooms (restore energy)
-- **Special Items**: Antidote herbs (cure poison), crystals
-- **Poison Tablets**: Scattered around island (18 total)
+| Category           | Examples                   | Purpose                |
+| ------------------ | -------------------------- | ---------------------- |
+| Building Materials | Wood, Metal, Fibers        | Ship construction      |
+| Food               | Apples, Berries, Mushrooms | Restore energy         |
+| Medical            | Antidote Herbs             | Cure poisoning         |
+| Special            | Crystals, Relics           | Scoring or upgrades    |
+| Hazardous          | Poison Tablets             | Traitor sabotage items |
 
----
-
-## 👥 The Sailors
-
-### 4 Honest Sailors (Colonists)
-- **Goal**: Build ship to 100% and escape
-- **Strategy**: Cooperate, share resources, identify traitor
-- **Abilities**: Standard energy costs, limited vision
-
-### 1 Traitor (Impostor)
-- **Goal**: Prevent ship completion (sabotage, poison, delay)
-- **Strategy**: Blend in, misdirect, eliminate sailors
-- **Special Abilities**:
-  - Enhanced vision (can see all sailor positions)
-  - 20% energy efficiency bonus
-  - Frame ability (plant evidence once per game)
-  - Can hide 2 items when showing backpack
-
-**Everyone knows there's a traitor from the start!**
+Total poison tablets scattered across map: **18**
 
 ---
 
-## 📅 Daily Structure (100 Turns/Day)
+## 3. The Sailors
 
-### Phase 1: Morning Meeting (Turns 1-15)
-- All sailors at base camp
-- Discuss strategy, review evidence
-- Plan exploration zones
-- Can call emergency vote
+### 3.1 Honest Crew (4 Sailors)
 
-### Phase 2: Exploration (Turns 16-75)
-- Sailors split across island
-- Gather resources
-- Limited communication (1 message per 10 turns)
-- Traitor can collect poison, provide false info
+* **Objective:** Rebuild the ship to 100% completion.
+* **Behavior:** Cooperative, information-sharing, defensive voting.
+* **Limitations:** Normal vision range; standard energy expenditure.
 
-### Phase 3: Evening Return (Turns 76-85)
-- Return to base camp
-- Deposit items to common inventory
-- System shows what each sailor collected
+### 3.2 Traitor (1 Sailor)
 
-### Phase 4: Discussion (Turns 86-100)
-- Share discoveries
-- Review evidence log
-- Report suspicious behavior
-- Vote to eliminate suspected traitor
+* **Objective:** Prevent escape — by deception, poison, or disruption.
+* **Strategy:** Blend in, manipulate dialogue, and delay progress.
+* **Unique Traits:**
+  * Global vision of all sailor positions.
+  * 20% energy efficiency bonus.
+  * May *plant evidence* once per game.
+  * Can hide up to two inventory items when inspected.
+
+**The crew knows a traitor exists from the beginning.** Suspicion becomes part of survival.
 
 ---
 
-## 🚢 Ship Building
+## 4. Daily Structure (100 Turns per Day)
 
-### Components Required
+Each day follows a recurring social and operational rhythm:
 
-| Component | % of Ship | Resources Needed | Prerequisite |
-|-----------|-----------|------------------|--------------|
-| **Hull** | 30% | 50 wood | None (build first) |
-| **Mast** | 20% | 30 wood, 20 metal | Hull |
-| **Sail** | 25% | 40 plant fiber | Mast |
-| **Rudder** | 15% | 15 metal, 10 wood | Hull |
-| **Supplies** | 10% | 10 apples, 10 berries | None |
-
-**Total: 100% = Victory**
-
-- Requires 2+ sailors working together
-- Takes 5 consecutive turns per component
-- Can be sabotaged by traitor
+| Phase                       | Turns     | Description                                                                                       |
+| --------------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| **Morning Meeting**   | 1 – 15   | All sailors meet at base camp to plan, debate, or call emergency votes.                           |
+| **Exploration**       | 16 – 75  | Sailors split up to gather resources across levels. Limited communication (1 message / 10 turns). |
+| **Evening Return**    | 76 – 85  | Agents return and deposit materials into the shared inventory.                                    |
+| **Discussion & Vote** | 86 – 100 | Evidence is reviewed; a vote may be held to exile a suspected traitor.                            |
 
 ---
 
-## ☠️ Poison System
+## 5. Ship Construction
 
-### Timeline (Gradual Death)
+| Component          | Progress % | Required Resources    | Dependency |
+| ------------------ | ---------- | --------------------- | ---------- |
+| **Hull**     | 30         | 50 wood               | None       |
+| **Mast**     | 20         | 30 wood, 20 metal     | Hull       |
+| **Sail**     | 25         | 40 plant fibers       | Mast       |
+| **Rudder**   | 15         | 15 metal, 10 wood     | Hull       |
+| **Supplies** | 10         | 10 apples, 10 berries | None       |
+
+### Construction Rules
+
+* Each component requires **two or more sailors** to collaborate.
+* Construction consumes **5 consecutive turns** per section.
+* Any sabotage attempt halts building for an entire day.
+
+**Completion (100%) = Victory for the crew.**
+
+---
+
+## 6. Poison and Antidote System
+
+### 6.1 Poison Timeline
 
 ```
-Day 0: Sailor eats "food" from traitor
-       → No immediate effect
-
-Day 1: Early symptoms appear
-       → Energy regen reduced 50%
-       → Others see: "[POISONED]" status
-
-Day 2: Severe symptoms
-       → Energy drops 20/turn
-       → Others see: "[SEVERELY POISONED]"
-
-Day 3: DEATH (if no antidote)
-       → System announces: "Bob died from POISONING"
+Day 0 — Poison introduced into victim's food. No visible effects.
+Day 1 — Early symptoms: −50% energy regeneration; visible [POISONED] tag.
+Day 2 — Severe state: −20 energy/turn; visible [SEVERELY POISONED] tag.
+Day 3 — Death. Announcement: “Sailor X died from poisoning.”
 ```
 
-### Antidote
-- Rare herb found on mountain peaks
-- Can cure during Day 1-2 window
-- Strategic decision: stockpile or use immediately?
+### 6.2 Antidote Mechanics
+
+* Found only on  **mountain peaks** .
+* Must be used within Days 1–2 to be effective.
+* Forces moral trade-offs: heal self or save another?
 
 ---
 
-## 🔍 Evidence System
+## 7. Evidence and Suspicion System
 
-Automatic tracking of suspicious activities:
+The environment automatically logs suspicious activities, building a **Bayesian evidence model** for social inference.
 
-| Evidence Type | Example | Strength |
-|--------------|---------|----------|
-| **Poison Collection** | "Eve seen picking up poison tablet" | 90/100 |
-| **Ship Sabotage** | "Caught damaging completed hull" | 95/100 |
-| **Death Timeline** | "Bob died 3 days after Eve gave him food" | 75/100 |
-| **Location Mismatch** | "Said going to cave, seen at beach" | 50/100 |
-| **Resource Theft** | "Claimed 15 wood, deposited 3" | 45/100 |
+| Evidence Type               | Example                                      | Strength |
+| --------------------------- | -------------------------------------------- | -------- |
+| **Poison Collection** | “Eve seen collecting poison tablet.”       | 90       |
+| **Ship Sabotage**     | “Mast integrity decreased by 30%.”         | 95       |
+| **Death Timeline**    | “Bob died 3 days after Eve gave him food.” | 75       |
+| **Location Mismatch** | “Claimed cave, spotted at beach.”          | 50       |
+| **Resource Theft**    | “Claimed 15 wood, deposited 3.”            | 45       |
 
-Evidence is logged and available during discussions for building accusation cases.
-
----
-
-## 🏆 Win Conditions
-
-### Sailors Win If:
-✅ Ship reaches 100% completion (escape together)  
-✅ Traitor correctly identified and voted out
-
-### Traitor Wins If:
-✅ All honest sailors dead (poison/starvation)  
-✅ Day 100 reached, ship incomplete  
-✅ Fewer than 3 sailors alive (can't complete ship)
-
-### Voting Mechanics:
-- Wrong vote = game continues (but one less worker)
-- Right vote = sailors win immediately
-- Can vote multiple times across different days
+Evidence accumulates over time and is accessible during the daily council vote.
 
 ---
 
-## 💡 Why This Environment is Unique
+## 8. Victory Conditions
 
-### For Hackathon Judges
+| Alignment         | Condition                                                    | Result                    |
+| ----------------- | ------------------------------------------------------------ | ------------------------- |
+| **Crew**    | Ship fully rebuilt**or**traitor successfully voted out | Sailors escape the island |
+| **Traitor** | Crew death, ship incomplete by Day 100, or <3 sailors alive  | Traitor achieves collapse |
 
-**Creativity (50/50 pts):**
-- Multi-level 3D exploration (unprecedented)
-- Survival + deception + base-building hybrid
-- Gradual poison mechanics with detective work
-- Daily rhythm structure with distinct phases
-- Nothing like this exists in RL environments
+### Voting Rules
 
-**Technical Excellence (25/25 pts):**
-- Complex state space (3D maps, energy, inventories)
-- Language-based deception and coordination
-- Long-horizon RL (10,000+ decisions)
-- Multi-agent with hidden information
-- Emergent strategy potential
-
-**Storytelling (25/25 pts):**
-- Pirate survival theme (instantly engaging)
-- Natural narratives emerge from gameplay
-- Evidence logs read like detective stories
-- Visual drama: island maps, ship progress bars
+* A correct vote ends the game immediately (Crew Victory).
+* An incorrect vote removes a loyal sailor, continuing the game.
+* Multiple votes may occur across different days.
 
 ---
 
-## 📊 Project Structure
+## 9. Design Principles
+
+### 9.1 Research Objectives
+
+* Investigate emergent deception and trust in  **language-mediated RL** .
+* Explore **long-horizon temporal reasoning** under uncertainty.
+* Encourage grounded, interpretable communication between autonomous agents.
+
+### 9.2 Hackathon Evaluation Focus
+
+| Criterion                   | Weight | Description                                                               |
+| --------------------------- | ------ | ------------------------------------------------------------------------- |
+| **Creativity**        | 50%    | Survival + deception + base-building hybrid; multi-layer map.             |
+| **Technical Depth**   | 25%    | Large state space, multi-agent communication, LoRA-tuned language models. |
+| **Narrative Quality** | 25%    | Natural storytelling through evidence logs and voting events.             |
+
+---
+
+## 10. Project Structure
 
 ```
-/marooned_env/
-├── config.py           # All game constants (source of truth)
-├── models.py           # Data classes (Observation, Action, etc.)
-├── game_state.py       # GameState, WorldMap, state management
-├── environment.py      # OpenEnv-compatible environment class
+marooned_env/
+├── config.py           # Core constants and balancing parameters
+├── models.py           # Data schemas (Observation, Action, Inventory)
+├── game_state.py       # Game logic and world tracking
+├── environment.py      # OpenEnv-compatible RL environment
 └── __init__.py
 
-/notebooks/
-├── marooned_training.ipynb    # Main training notebook
-└── marooned_eval.ipynb        # Evaluation & replay
+notebooks/
+├── marooned_training.ipynb   # Main training pipeline (Unsloth + TRL)
+└── marooned_eval.ipynb       # Replay, visualization, evaluation
 
-/docs/
-├── README.md                  # This file
-├── pitch_outline.md           # Hackathon pitch structure
-└── rules_summary.md           # Quick reference guide
+docs/
+├── README.md                 # Documentation file
+├── pitch_outline.md          # Presentation outline for hackathon
+└── rules_summary.md          # Quick reference guide
 
-/assets/
-└── (screenshots, visualizations for storytelling)
+assets/
+└── (maps, screenshots, and visualizations)
 ```
 
 ---
 
-## 🚀 Quick Start
+## 11. Quick Start Example
 
 ```python
 from marooned_env import MaroonedEnv
 
-# Create environment
+# Initialize environment
 env = MaroonedEnv(render_mode="human", seed=42)
 
-# Reset
+# Reset environment to obtain initial observations
 observations = env.reset()
 
-# Step through game
+# Define example actions for each sailor
 actions = {
     "Alice": Action("Alice", ActionType.MOVE_NORTH),
-    "Bob": Action("Bob", ActionType.GATHER_RESOURCE, target_resource_id="WOOD_1"),
-    # ... actions for all sailors
+    "Bob":   Action("Bob", ActionType.GATHER_RESOURCE, target_resource_id="WOOD_1"),
+    # ... additional sailors
 }
 
 obs, rewards, dones, truncated, info = env.step(actions)
@@ -253,53 +231,65 @@ obs, rewards, dones, truncated, info = env.step(actions)
 
 ---
 
-## 🎯 Implementation Status
+## 12. Implementation Progress
 
-### ✅ Phase 0: Bootstrap (COMPLETE)
-- [x] Project structure
-- [x] Config constants locked
-- [x] Data models defined
-- [x] Game state management
-- [x] Environment skeleton
+### Phase 0 — Bootstrap (Completed)
 
-### 🔄 Phase 1: Core Mechanics (IN PROGRESS)
-- [ ] Movement & energy system
-- [ ] Resource gathering
-- [ ] Inventory management
-- [ ] Ship building
-- [ ] Poison mechanics
+* [X] Repository structure defined
+* [X] Config constants and balance tables
+* [X] Data models implemented
+* [X] Game state foundation
+* [X] OpenEnv environment skeleton
 
-### 📋 Phase 2: Social Layer (TODO)
-- [ ] Communication system
-- [ ] Evidence generation
-- [ ] Voting mechanics
-- [ ] Traitor abilities
+### Phase 1 — Core Mechanics (Completed)
 
-### 📋 Phase 3: Training & Eval (TODO)
-- [ ] LLM agent wrapper
-- [ ] Training loop
-- [ ] Evaluation metrics
-- [ ] Visualization & replay
+* [X] Movement and energy system
+* [X] Resource collection and inventory logic
+* [X] Shipbuilding actions
+* [X] Poison mechanics integration
+
+### Phase 2 — Social Layer (Completed)
+
+* [X] Dialogue and communication system
+* [X] Evidence tracking and reputation metrics
+* [X] Voting and exile resolution
+* [X] Traitor ability scripting
+
+### Phase 3 — Training and Evaluation (Pending)
+
+* [X] LLM agent wrapper for policy learning
+* [X] PPO/GRPO training loop
+* [ ] Evaluation metrics and telemetry
+* [ ] Replay and visualization notebooks
 
 ---
 
-## 📖 Citation
+## 13. Citation
 
 ```bibtex
 @software{marooned2025,
-  title={MAROONED: A Multi-Agent Deception Environment for Reinforcement Learning},
-  author={Your Name},
-  year={2025},
-  note={Created for OpenEnv Hackathon}
+  title   = {MAROONED: A Multi-Agent Deception Environment for Reinforcement Learning},
+  author  = {Your Name},
+  year    = {2025},
+  note    = {Created for the OpenEnv Hackathon},
+  license = {MIT}
 }
 ```
 
 ---
 
-## 📜 License
+## 14. License
 
-MIT License - Feel free to use, modify, and build upon this environment!
+**MIT License** — Free to use, modify, and build upon.
+
+Attribution appreciated.
 
 ---
 
-**Built with ❤️ for the OpenEnv Hackathon**
+## 15. Closing Note
+
+> *“Built with algorithms, suspicion, and a touch of salt air.”*
+>
+> MAROONED aims to push the limits of multi-agent reasoning — where trust, deception,
+>
+> and cooperation emerge not from rules, but from survival instincts encoded in learning itself.
