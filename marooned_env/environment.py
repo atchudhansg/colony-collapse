@@ -1569,7 +1569,7 @@ class MaroonedEnv:
     
     def render_map(self, level: 'MapLevel' = None, use_emoji: bool = True) -> str:
         """
-        Render ASCII map of the island.
+        Render beautifully formatted ASCII map of the island.
         
         Emoji Legend:
         🟫 = land (forest/beach)
@@ -1614,7 +1614,7 @@ class MaroonedEnv:
             elif resource.resource_type in [ResourceType.APPLE, ResourceType.BERRY]:
                 grid[y][x] = '🍎' if use_emoji else 'F'
             elif resource.resource_type == ResourceType.ANTIDOTE_HERB:
-                grid[y][x] = '🌿' if use_emoji else 'H'  # Changed from 'A' to 'H' for Herb to avoid collision with Alice
+                grid[y][x] = '🌿' if use_emoji else 'H'
         
         # Mark poison tablets
         for poison_id, pos in self.state.world_map.poison_tablets.items():
@@ -1659,35 +1659,58 @@ class MaroonedEnv:
                 # Single sailor - show their first letter
                 grid[y][x] = sailors_here[0][0]
             else:
-                # Multiple sailors - show the count
+                # Multiple sailors - show count
                 count = len(sailors_here)
                 if use_emoji:
-                    grid[y][x] = f'{count}👥'  # e.g., "5👥"
+                    grid[y][x] = f'{count}👥'
                 else:
                     grid[y][x] = str(count)
         
-        # Build string representation
-        result = f"\n{'='*60}\n"
-        result += f"🏝️  {level.name} LEVEL (Z={level.value})\n"
-        result += f"{'='*60}\n"
+        # Build beautiful string representation
+        level_icons = {
+            MapLevel.MOUNTAIN: '⛰️',
+            MapLevel.GROUND: '🏝️',
+            MapLevel.CAVE: '🕳️'
+        }
         
-        if use_emoji:
-            result += "Legend: 🟫 land | 🌲 wood | ⚙️ metal | 🍎 food | 🌿 antidote | ☠️ poison\n"
-            result += "        ⬆️ stairs up | ⬇️ stairs down | 🏠 base | A/B/C/D/E sailors | 5👥 group\n\n"
-        else:
-            result += "Legend: . land | W wood | M metal | F food | H antidote | P poison\n"
-            result += "        ^ stairs up | v stairs down | B base camp | A/B/C/D/E sailors | # count\n\n"
+        result = "\n"
         
-        # Add column numbers (only for smaller maps)
+        # Add column numbers header FIRST (before the box)
+        # Space each number to align with emoji cells (each emoji is roughly 2 chars wide)
         if width <= 30:
-            result += "   " + "".join(f"{i%10}" for i in range(width)) + "\n"
+            result += "   " + "".join(f"{i%10} " for i in range(width)) + "\n"
         
-        # Add rows with row numbers
+        result += "┌" + "─" * (width * 2 + 2) + "┐\n"
+        result += f"│ {level_icons.get(level, '🏝️')}  {level.name} LEVEL (Z={level.value})".ljust(width * 2 + 2) + " │\n"
+        result += "├" + "─" * (width * 2 + 2) + "┤\n"
+        
+        # Compact legend based on level
+        if use_emoji:
+            if level == MapLevel.MOUNTAIN:
+                result += "│ Legend: ⛰️ mountain | 🌲 wood | ⚙️ metal | 🍎 food | 🌿 antidote | ☠️ poison\n"
+            elif level == MapLevel.CAVE:
+                result += "│ Legend: 🪨 cave | 🌲 wood | ⚙️ metal | 🍎 food | 🌿 antidote | ☠️ poison\n"
+            else:
+                result += "│ Legend: 🟫 land | 🌲 wood | ⚙️ metal | 🍎 food | 🌿 antidote | ☠️ poison\n"
+            result += "│         ⬆️ stairs up | ⬇️ stairs down | 🏠 base | A/B/C/D/E sailors\n"
+        else:
+            result += "│ Legend: . land | W wood | M metal | F food | H herb | P poison\n"
+            result += "│         ^ up | v down | B base | A/B/C/D/E sailors\n"
+        
+        result += "└" + "─" * (width * 2 + 2) + "┘\n"
+        
+        # Add rows with row numbers and grid
         for y, row in enumerate(grid):
             if width <= 30:
                 result += f"{y:2} " + "".join(row) + "\n"
             else:
                 result += "".join(row) + "\n"
+        
+        # Add footer showing living sailors on this level
+        sailors_on_level = [sid for sid, s in self.state.sailors.items() 
+                           if s.alive and s.position.level == level]
+        if sailors_on_level:
+            result += f"\n👥 Sailors on {level.name}: {', '.join(sailors_on_level)}\n"
         
         return result
     
