@@ -14,7 +14,7 @@ from config import (
     SPATIAL_VIEW_RADIUS, ActionType, ResourceType,
     ENERGY_COST_WALK, ENERGY_COST_CLIMB_UP, ENERGY_COST_CLIMB_DOWN,
     ENERGY_COST_GATHER, ENERGY_COST_BUILD, FOOD_ENERGY_VALUES,
-    SHIP_SITE_POSITION, VOTING_ALLOWED_PHASES, MapLevel,
+    SHIP_SITE_POSITION, BASE_CAMP_POSITION, VOTING_ALLOWED_PHASES, MapLevel,
     # Phase 4: Reward constants
     REWARD_BASE_TURN_PENALTY,
     REWARD_COLONIST_GATHER_RESOURCE,
@@ -1110,6 +1110,9 @@ class MaroonedEnv:
             backpack=sailor.backpack.copy(),
             poison_state=sailor.poison_state,
             spatial_view=spatial_view,
+            terrain_map=self.state.world_map.terrain,  # Full island terrain map
+            level_transitions=self.state.world_map.level_transitions,  # Staircase locations
+            base_camp_position=Position(*BASE_CAMP_POSITION),  # Base camp location
             common_inventory=self.state.common_inventory.copy(),
             ship_progress=self.state.ship_progress,
             all_sailors_energy=all_sailors_energy,
@@ -1466,6 +1469,151 @@ class MaroonedEnv:
                 result += "".join(row) + "\n"
         
         return result
+    
+    # ========================================================================
+    # PHASE 5: OPENENV COMPATIBILITY & STATE EXPORT
+    # ========================================================================
+    
+    def get_state(self) -> Dict[str, Any]:
+        """
+        Get complete environment state for visualization and replay.
+        
+        Returns a dict containing all relevant game state for external tools,
+        notebooks, and visualization layers.
+        
+        Returns:
+            state_dict: Complete serializable state dictionary
+        """
+        if self.state is None:
+            return {"error": "Environment not initialized. Call reset() first."}
+        
+        # Sailor positions and statuses
+        sailors_state = {}
+        for sailor_id, sailor in self.state.sailors.items():
+            pos_tuple = sailor.position.to_tuple()
+            sailors_state[sailor_id] = {
+                "id": sailor.sailor_id,
+                "position": (pos_tuple[0], pos_tuple[1], pos_tuple[2].value),  # Convert MapLevel to int
+                "alive": sailor.alive,
+                "energy": sailor.energy,
+                "is_traitor": self.state.is_traitor(sailor_id),
+                "poisoned": sailor.poisoned_on_day is not None,
+                "backpack_items": len([item for item in sailor.backpack if item.quantity > 0]),
+                "death_cause": sailor.death_cause.value if sailor.death_cause else None,
+            }
+        
+        # Ship progress
+        ship_state = {
+            "total_percentage": self.state.ship_progress.total_percentage,
+            "is_complete": self.state.ship_progress.is_complete(),
+            "components": {
+                comp.value: {
+                    "progress": prog.progress_percentage,
+                    "completed": prog.completed,
+                }
+                for comp, prog in self.state.ship_progress.components.items()
+            }
+        }
+        
+        # Common inventory
+        inventory_state = {
+            item.resource_type.value: item.quantity
+            for item in self.state.common_inventory
+            if item.quantity > 0
+        }
+        
+        # Evidence log
+        evidence_state = [
+            {
+                "evidence_id": ev.evidence_id,
+                "type": ev.evidence_type.value,
+                "day": ev.day,
+                "description": ev.description,
+                "strength": ev.strength,
+            }
+            for ev in self.state.evidence_log.all_evidence[-10:]  # Last 10 pieces
+        ]
+        
+        # Messages
+        messages_state = [
+            {
+                "sender": msg.sender_id,
+                "type": msg.message_type.value,
+                "content": msg.content,
+                "day": msg.day,
+                "turn": msg.turn,
+            }
+            for msg in self.state.message_history[-20:]  # Last 20 messages
+        ]
+        
+        # Game progress
+        game_state = {
+            "day": self.state.current_day,
+            "turn": self.state.current_turn,
+            "phase": self.state.current_phase,
+            "game_over": self.state.game_over,
+            "living_sailors_count": len(self.state.living_sailors),
+            "dead_sailors_count": len(self.state.dead_sailors),
+        }
+        
+        # Check win conditions
+        winner_info = self._check_win_conditions()
+        
+        return {
+            "sailors": sailors_state,
+            "ship": ship_state,
+            "common_inventory": inventory_state,
+            "evidence": evidence_state,
+            "messages": messages_state,
+            "game": game_state,
+            "winner": winner_info.get("winner") if winner_info else None,
+            "win_reason": winner_info.get("reason") if winner_info else None,
+        }
+    
+    def get_observation_space_description(self) -> Dict[str, str]:
+        """
+        Describe the observation space for OpenEnv documentation.
+        
+        Returns:
+            description: Human-readable description of observation structure
+        """
+        return {
+            "type": "Dict",
+            "description": "Per-sailor observations containing spatial view, public status, and private info",
+            "fields": {
+                "spatial_view": "5-tile radius view around sailor position",
+                "public_status": "Ship progress, common inventory, all sailors' energy/status",
+                "messages": "Recent communication messages",
+                "evidence": "Accumulated evidence against sailors",
+                "private_backpack": "Sailor's personal inventory (hidden from others)",
+                "role": "Colonist or Traitor (only known to self)",
+                "phase_info": "Current day, turn, and game phase",
+            }
+        }
+    
+    def get_action_space_description(self) -> Dict[str, Any]:
+        """
+        Describe the action space for OpenEnv documentation.
+        
+        Returns:
+            description: Human-readable description of available actions
+        """
+        return {
+            "type": "Structured Action",
+            "description": "Multi-component action with movement, task, and communication",
+            "components": {
+                "action_type": {
+                    "type": "Enum",
+                    "values": [at.value for at in ActionType],
+                    "description": "Primary action to perform this turn"
+                },
+                "movement": "Optional direction (NORTH/SOUTH/EAST/WEST/UP/DOWN)",
+                "resource_type": "For GATHER/DEPOSIT actions",
+                "ship_component": "For BUILD_SHIP/SABOTAGE_SHIP actions",
+                "target_sailor": "For OFFER_ITEM/VOTE actions",
+                "message": "Optional text message (communication)",
+            }
+        }
     
     def _render_human(self) -> str:
         """Render in human-readable text format."""

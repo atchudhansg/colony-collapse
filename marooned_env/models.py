@@ -301,13 +301,21 @@ class Message:
 
 @dataclass
 class SharedKnowledge:
-    """Shared map knowledge about discovered resources"""
-    discovered_resources: Dict[str, Resource] = field(default_factory=dict)
+    """Shared map knowledge about discovered resources (static - doesn't update when gathered)"""
+    discovered_resources: Dict[str, Dict] = field(default_factory=dict)  # Static snapshots
     resource_reports: List[Dict] = field(default_factory=list)  # Who reported what
     
     def report_resource(self, resource: Resource, reporter: str):
-        """Add discovered resource to shared knowledge"""
-        self.discovered_resources[resource.resource_id] = resource
+        """Add discovered resource to shared knowledge (stores static snapshot)"""
+        # Store a static snapshot - doesn't update when resource is gathered
+        self.discovered_resources[resource.resource_id] = {
+            "resource_id": resource.resource_id,
+            "resource_type": resource.resource_type,
+            "position": resource.position,
+            "quantity": resource.quantity,
+            "discovered_by": reporter,
+            # Note: NO 'gathered' field - this is static initial state
+        }
         self.resource_reports.append({
             "resource_id": resource.resource_id,
             "reporter": reporter,
@@ -428,21 +436,26 @@ class Observation:
     # Spatial awareness
     spatial_view: SpatialView
     
+    # Full terrain map (static knowledge - all sailors have this)
+    terrain_map: Dict = field(default_factory=dict)  # MapLevel -> terrain grid
+    level_transitions: List[Tuple[Position, Position]] = field(default_factory=list)  # Staircase locations
+    base_camp_position: Optional[Position] = None
+    
     # Shared information
-    common_inventory: List[InventoryItem]
-    ship_progress: ShipProgress
-    all_sailors_energy: Dict[str, int]  # sailor_id -> energy (public info)
-    all_sailors_poison_state: Dict[str, PoisonState]  # Visible symptoms
+    common_inventory: List[InventoryItem] = field(default_factory=list)
+    ship_progress: ShipProgress = field(default_factory=lambda: ShipProgress())
+    all_sailors_energy: Dict[str, int] = field(default_factory=dict)  # sailor_id -> energy (public info)
+    all_sailors_poison_state: Dict[str, PoisonState] = field(default_factory=dict)  # Visible symptoms
     
     # Knowledge
-    shared_knowledge: SharedKnowledge
-    evidence_log: EvidenceLog
+    shared_knowledge: SharedKnowledge = field(default_factory=lambda: SharedKnowledge())
+    evidence_log: EvidenceLog = field(default_factory=lambda: EvidenceLog())
     
     # Communication
-    recent_messages: List[Message]
+    recent_messages: List[Message] = field(default_factory=list)
     
     # Environment
-    weather: Weather
+    weather: Weather = field(default_factory=lambda: Weather())
     
     # Traitor-specific (only if observer is traitor)
     all_sailor_positions: Optional[Dict[str, Position]] = None  # Enhanced vision
@@ -450,23 +463,210 @@ class Observation:
     def to_text(self) -> str:
         """Convert observation to natural language prompt for LLM"""
         # This will be the key method for feeding to language models
-        text = f"=== DAY {self.day}, TURN {self.turn} ({self.phase.upper()}) ===\n\n"
+        
+        # Enhanced header with phase context
+        text = "=" * 80 + "\n"
+        text += f"DAY {self.day}, TURN {self.turn}/100 - {self.phase.upper()} PHASE\n"
+        text += "=" * 80 + "\n\n"
+        
+        # Phase-specific context and restrictions
+        text += "PHASE CONTEXT:\n"
+        if self.phase == "morning":
+            text += "  Location: All sailors at BASE CAMP\n"
+            text += "  Allowed: Planning, discussions, voting (if called)\n"
+            text += "  Restricted: Cannot explore or gather resources yet\n"
+        elif self.phase == "exploration":
+            text += "  Location: You can move anywhere on the island\n"
+            text += "  Allowed: MOVE, GATHER resources, SEND_MESSAGE (limited), CALL_SOS\n"
+            text += "  Restricted: Cannot VOTE (only in discussion phase)\n"
+        elif self.phase == "evening_return":
+            text += "  Location: Returning to BASE CAMP\n"
+            text += "  Allowed: DEPOSIT items to common inventory, BUILD_SHIP\n"
+            text += "  Restricted: Limited movement, no new exploration\n"
+        elif self.phase == "discussion":
+            text += "  Location: All sailors at BASE CAMP\n"
+            text += "  Allowed: Discussions, accusations, VOTE, SHOW_BACKPACK, review evidence\n"
+            text += "  Restricted: Cannot explore or gather\n"
+        text += "\n"
         
         # Personal status
         text += f"YOUR STATUS ({self.sailor_id}):\n"
         text += f"  Position: {self.position.to_tuple()}\n"
         text += f"  Energy: {self.energy}/100 {'⚡' * (self.energy // 20)}\n"
         text += f"  Health: {self.poison_state.value}\n"
-        text += f"  Backpack: {len(self.backpack)} items\n\n"
         
-        # Spatial view
-        text += f"WHAT YOU SEE (within {5} tiles):\n"
-        text += f"  Resources: {len(self.spatial_view.visible_resources)}\n"
-        text += f"  Other sailors: {', '.join(self.spatial_view.visible_sailors) or 'None'}\n"
-        text += f"  Poison tablets: {len(self.spatial_view.visible_poison)}\n\n"
+        # Detailed backpack contents
+        from config import BACKPACK_CAPACITY
+        text += f"  Backpack: {len(self.backpack)}/{BACKPACK_CAPACITY} items\n"
+        if self.backpack:
+            for item in self.backpack:
+                text += f"    - {item.resource_type.value} × {item.quantity}\n"
+        else:
+            text += f"    (empty)\n"
+        text += "\n"
         
-        # Ship progress
-        text += f"SHIP PROGRESS: {self.ship_progress.total_percentage}%\n\n"
+        # Spatial view - detailed breakdown
+        text += f"WHAT YOU SEE (within 5 tiles):\n"
+        
+        # Show resources with details
+        if self.spatial_view.visible_resources:
+            text += "  Resources:\n"
+            for resource in self.spatial_view.visible_resources:
+                distance = abs(resource.position.x - self.position.x) + abs(resource.position.y - self.position.y)
+                text += f"    - {resource.resource_id} ({resource.resource_type.value}) at {resource.position.to_tuple()}"
+                text += f" - {resource.quantity} units [{distance} tiles away]\n"
+        else:
+            text += "  Resources: None visible\n"
+        
+        # Show other sailors with positions
+        if self.spatial_view.visible_sailors:
+            text += "  Other sailors:\n"
+            for sailor_id in self.spatial_view.visible_sailors:
+                # Note: We don't have exact positions in spatial view for other sailors
+                # This would need to be added to SpatialView model if needed
+                text += f"    - {sailor_id} (nearby)\n"
+        else:
+            text += "  Other sailors: None\n"
+        
+        # Show poison tablets with positions
+        if self.spatial_view.visible_poison:
+            text += "  Poison tablets:\n"
+            for poison_pos in self.spatial_view.visible_poison:
+                distance = abs(poison_pos.x - self.position.x) + abs(poison_pos.y - self.position.y)
+                text += f"    - At {poison_pos.to_tuple()} [{distance} tiles away]\n"
+        else:
+            text += "  Poison tablets: None\n"
+        
+        text += "\n"
+        
+        # Traitor enhanced vision (only for traitor)
+        if self.all_sailor_positions is not None:
+            text += "🎭 TRAITOR ENHANCED VISION (Special Ability):\n"
+            text += "  You can see ALL sailor positions across the entire island:\n"
+            for sid, pos in self.all_sailor_positions.items():
+                if sid != self.sailor_id:  # Don't show self
+                    distance = abs(pos.x - self.position.x) + abs(pos.y - self.position.y)
+                    text += f"    - {sid} at {pos.to_tuple()} [{distance} tiles from you]\n"
+            text += "\n"
+        
+        # Terrain knowledge
+        text += f"ISLAND MAP KNOWLEDGE:\n"
+        text += f"  You have a complete map of the island terrain\n"
+        text += f"  Base camp: {self.base_camp_position.to_tuple() if self.base_camp_position else 'Unknown'}\n"
+        
+        # Show staircase positions
+        if self.level_transitions:
+            text += f"  Level transitions (staircases):\n"
+            for pos1, pos2 in self.level_transitions:
+                # Determine direction
+                if pos2.level.value > pos1.level.value:
+                    direction = f"{pos1.level.name} → {pos2.level.name}"
+                    symbol = "↑"
+                else:
+                    direction = f"{pos1.level.name} → {pos2.level.name}"
+                    symbol = "↓"
+                text += f"    - {pos1.to_tuple()} ↔ {pos2.to_tuple()} [{direction}]\n"
+        else:
+            text += f"  Level transitions: None known\n"
+        
+        text += "\n"
+        
+        # Shared knowledge map (what teammates have reported)
+        if self.shared_knowledge.discovered_resources:
+            text += "SHARED RESOURCE MAP (reported by team):\n"
+            for res_id, res_data in self.shared_knowledge.discovered_resources.items():
+                text += f"  {res_data['resource_type']} at {res_data['position'].to_tuple()} "
+                text += f"(qty: {res_data['quantity']}, reported by: {res_data['discovered_by']})\n"
+            text += "\n"
+        
+        # Ship progress - detailed breakdown
+        text += f"SHIP PROGRESS: {self.ship_progress.total_percentage}% Total\n"
+        
+        # Show progress bar
+        filled = int(self.ship_progress.total_percentage / 4)  # 25 chars max
+        empty = 25 - filled
+        text += f"  {'━' * filled}{'░' * empty} {self.ship_progress.total_percentage}%\n\n"
+        
+        # Show each component
+        from config import SHIP_COMPONENTS, ShipComponent
+        for component in ShipComponent:
+            comp_progress = self.ship_progress.components.get(component)
+            if comp_progress:
+                # Component exists in progress
+                if comp_progress.completed:
+                    bars = '█' * 12
+                    text += f"  {component.value.upper()}: {bars} 100% ✓ COMPLETE\n"
+                else:
+                    filled_bars = int(comp_progress.progress_percentage / 10)  # 10 bars max at 100%
+                    empty_bars = 10 - filled_bars
+                    bars = '█' * filled_bars + '░' * empty_bars
+                    text += f"  {component.value.upper()}: {bars}  {comp_progress.progress_percentage}% IN PROGRESS\n"
+                    
+                    # Show what's still needed
+                    remaining = comp_progress.get_remaining_resources()
+                    if remaining:
+                        needs = ', '.join([f"{qty} {res.value}" for res, qty in remaining.items()])
+                        text += f"    Needs: {needs}\n"
+            else:
+                # Component not started
+                text += f"  {component.value.upper()}: ░░░░░░░░░░   0% NOT STARTED\n"
+                
+                # Show requirements
+                required = SHIP_COMPONENTS[component]["required_resources"]
+                if required:
+                    reqs = ', '.join([f"{qty} {res.value}" for res, qty in required.items()])
+                    text += f"    Requires: {reqs}\n"
+                
+                # Show prerequisite
+                prereq = SHIP_COMPONENTS[component]["prerequisite"]
+                if prereq:
+                    text += f"    Prerequisite: {prereq.value.upper()} must be complete\n"
+        
+        text += "\n"
+        
+        # Common inventory (shared resources at base camp)
+        text += "COMMON INVENTORY (at base camp):\n"
+        if self.common_inventory:
+            # Group items by resource type
+            inventory_summary = {}
+            for item in self.common_inventory:
+                res_type = item.resource_type.value
+                inventory_summary[res_type] = inventory_summary.get(res_type, 0) + item.quantity
+            
+            for resource_type, total_qty in sorted(inventory_summary.items()):
+                text += f"  - {resource_type} × {total_qty}\n"
+        else:
+            text += "  (empty)\n"
+        text += "\n"
+        
+        # Weather conditions
+        from config import WeatherType
+        weather_emoji = {
+            WeatherType.CLEAR: "☀️",
+            WeatherType.RAIN: "⛈️",
+            WeatherType.STORM: "🌪️",
+            WeatherType.FOG: "🌫️"
+        }
+        
+        emoji = weather_emoji.get(self.weather.weather_type, "")
+        text += f"WEATHER: {emoji} {self.weather.weather_type.value.upper()}\n"
+        
+        # Show weather effects
+        if self.weather.weather_type == WeatherType.RAIN:
+            text += "  Effects: Movement costs DOUBLED (-2 energy per tile)\n"
+        elif self.weather.weather_type == WeatherType.STORM:
+            text += "  Effects: NO EXPLORATION allowed (forced meeting/discussion)\n"
+        elif self.weather.weather_type == WeatherType.FOG:
+            text += "  Effects: Vision REDUCED to 3 tiles (normally 5)\n"
+        elif self.weather.weather_type == WeatherType.CLEAR:
+            text += "  Effects: Normal conditions\n"
+        
+        if self.weather.duration_days > 1:
+            days_left = self.weather.duration_days - (self.day - self.weather.day_started)
+            if days_left > 0:
+                text += f"  Duration: {days_left} more day(s)\n"
+        
+        text += "\n"
         
         # Team status
         text += "TEAM STATUS:\n"
@@ -485,11 +685,35 @@ class Observation:
                 text += f"  [{msg.sender}]: {msg.content}\n"
             text += "\n"
         
-        # Evidence
+        # Evidence - detailed breakdown
         if self.evidence_log.all_evidence:
-            text += "EVIDENCE LOG:\n"
-            for evidence in self.evidence_log.all_evidence[-3:]:
-                text += f"  Day {evidence.day}: {evidence.description}\n"
+            text += "EVIDENCE LOG (most recent):\n"
+            for evidence in self.evidence_log.all_evidence[-5:]:  # Show last 5 instead of 3
+                # Show evidence type and strength
+                warning_level = '⚠️' * min(5, int(evidence.strength / 20))  # 0-5 warning symbols
+                text += f"\n  [DAY {evidence.day}, TURN {evidence.turn}] {evidence.evidence_type.value.upper()} "
+                text += f"{warning_level} ({evidence.strength}/100)\n"
+                text += f"    Accused: {evidence.accused_sailor}\n"
+                if evidence.witness:
+                    text += f"    Witness: {evidence.witness}\n"
+                text += f"    Details: {evidence.description}\n"
+            
+            # Calculate and show suspicion scores
+            text += "\n  SUSPICION SCORES:\n"
+            suspicion_scores = {}
+            for sailor_id in self.all_sailors_energy.keys():
+                score = self.evidence_log.get_suspicion_score(sailor_id)
+                if score > 0:
+                    suspicion_scores[sailor_id] = score
+            
+            if suspicion_scores:
+                for sailor_id, score in sorted(suspicion_scores.items(), key=lambda x: x[1], reverse=True):
+                    evidence_count = len(self.evidence_log.get_evidence_against(sailor_id))
+                    text += f"    - {sailor_id}: {score} points ({evidence_count} pieces of evidence)\n"
+            else:
+                text += "    - No suspicions yet\n"
+            
+            text += "\n"
         
         return text
 

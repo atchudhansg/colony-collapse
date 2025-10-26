@@ -58,11 +58,20 @@ LEVEL -1 (CAVES):
         - Poison tablets (glowing purple)
         - Terrain obstacles
     - Updates as they move
-3. **Shared Knowledge Map** (built collaboratively):
+3. **Shared Knowledge Map** (built collaboratively): ✅
     - When sailor discovers resource, it gets marked for everyone
     - Example: "Alice discovered WOOD_PILE_A at Forest-North (15, 20, Z0)"
+    - **IMPORTANT**: Map shows **initial** resource locations ONLY - doesn't update when gathered
     - Others can verify: "I'll go check if that's true"
     - Enables catching lies: "Eve said valley is empty but I found 20 wood there!"
+    - **Traitor advantage**: Can gather resources and claim spot was empty (no proof)
+    - **Implementation**: `shared_knowledge` field tracks static snapshots (never marks as gathered)
+    - **Phase 5 Critical Fix**: Added to `to_text()` output so LLM agents can SEE shared map:
+        - Agents must compare spatial view (what they see) vs shared map (what was reported)
+        - Lie detection: "Bob reported wood at (5,3) but I'm here and see nothing!"
+        - Resource planning: "Let me go to that rope location Charlie reported"
+        - Evidence creation: Spatial view ≠ shared map → suspicious behavior
+        - Format: Shows resource type, position, quantity, who reported it
 
 ### **Movement & Energy Costs**
 
@@ -78,6 +87,33 @@ Initial Energy: 100/100
 Energy Regeneration: +10 per day if you eat food
 No food eaten: -20 energy per day
 
+```
+
+### **WAIT Action (Technical Implementation)**
+
+```
+Purpose: No-operation action for multi-agent coordination
+
+When to use WAIT:
+- Agent wants to skip their turn without taking action
+- Agent is dead but still in the multi-agent loop
+- Testing and coordination scenarios
+
+Behavior:
+- No energy cost
+- No state change
+- Returns success without errors
+- Essential for keeping multi-agent step() running
+
+Technical Note:
+In multi-agent RL environments, ALL agents must provide actions
+each step, even dead ones. WAIT serves as the clean fallback
+that doesn't crash the system.
+
+Example:
+# All agents wait
+actions = {sid: Action(sid, ActionType.WAIT) for sid in env.agents}
+env.step(actions)
 ```
 
 ---
@@ -726,7 +762,40 @@ HARD MODE:
 
 ---
 
-## 📈 WHY THIS WINS THE HACKATHON
+## � IMPLEMENTATION NOTES
+
+### **Actions: What Was Implemented vs. Planned**
+
+**WAIT Action** ✅
+- **Status**: Implemented and essential
+- **Purpose**: No-op action for multi-agent coordination
+- **Why needed**: 
+  - Allows agents to skip turns
+  - Required for dead agents (they still need actions in multi-agent loop)
+  - Clean fallback that doesn't crash the system
+  - Standard in RL environments (like "noop" in Atari)
+
+**REST Action** ❌ 
+- **Status**: Removed (was dead code)
+- **Original idea**: "Recover energy (bonus regen?)"
+- **Why removed**: 
+  - Never mentioned in game plan
+  - Never implemented (no handler function)
+  - Would have been redundant with EAT_FOOD action
+  - Energy recovery already handled by:
+    - Eating food items (immediate restoration)
+    - Daily regeneration (+10 if ate food)
+    - No strategic value added
+
+**Energy Recovery Mechanics** (As Implemented):
+- **Immediate**: EAT_FOOD action consumes food item, restores energy
+- **Daily**: +10 energy per day if you ate food, -20 if you didn't
+- **Emergency**: SOS system for critical low energy situations
+- **No passive recovery**: No "rest and wait" mechanic needed
+
+---
+
+## �📈 WHY THIS WINS THE HACKATHON
 
 ### **Creativity (50 pts)** - MAXED
 

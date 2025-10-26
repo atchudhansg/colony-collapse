@@ -493,7 +493,6 @@ class ActionType(Enum):
     
     # Passive
     WAIT = "wait"                       # Do nothing this turn
-    REST = "rest"                       # Recover energy (bonus regen?)
 
 
 # ============================================================================
