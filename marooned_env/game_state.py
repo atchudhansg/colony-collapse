@@ -5,14 +5,14 @@ Central game state and world state classes.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Set, Optional, Tuple, Any
 import random
 
 from config import (
     MapLevel, MAP_SIZES, BASE_CAMP_POSITION, SHIP_SITE_POSITION,
     TOTAL_SAILORS, TRAITOR_COUNT, POISON_TABLET_COUNT,
     POISON_SPAWN_DISTRIBUTION, RESOURCE_SPAWNS,
-    MAX_DAYS, TURNS_PER_DAY, WeatherType,
+    MAX_DAYS, TURNS_PER_DAY, WeatherType, EvidenceType,
     PHASE_MORNING_START, PHASE_MORNING_END,
     PHASE_EXPLORATION_START, PHASE_EXPLORATION_END,
     PHASE_EVENING_RETURN_START, PHASE_EVENING_RETURN_END,
@@ -141,6 +141,12 @@ class GameState:
     evidence_log: EvidenceLog = field(default_factory=EvidenceLog)
     message_history: List[Message] = field(default_factory=list)
     
+    # Phase 3: Location tracking for evidence
+    sailor_plans: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # {sailor_id: {'claimed_location': Position, 'claimed_at_day': int}}
+    
+    # Phase 3: Resource tracking for theft detection
+    sailor_gathered_resources: Dict[str, Dict[ResourceType, int]] = field(default_factory=dict)  # {sailor_id: {resource_type: total_gathered}}
+    
     # Voting
     voting_history: List[VotingSession] = field(default_factory=list)
     current_vote: Optional[VotingSession] = None
@@ -188,6 +194,8 @@ class GameState:
     
     def advance_turn(self):
         """Move to next turn, handle day transitions"""
+        old_phase = self.current_phase
+        
         self.current_turn += 1
         self.total_turns_elapsed += 1
         
@@ -201,6 +209,10 @@ class GameState:
         # Update phase
         phase_info = self.get_current_phase_info()
         self.current_phase = phase_info["phase"]
+        
+        # Check for location mismatches when transitioning to evening_return
+        if old_phase == "exploration" and self.current_phase == "evening_return":
+            self._check_location_mismatches()
     
     def _on_new_day(self):
         """Handle new day events"""
@@ -328,6 +340,45 @@ class GameState:
             sailor.poison_state = PoisonState.HEALTHY
             sailor.poisoned_on_day = None
             sailor.poisoned_by = None
+    
+    # ========================================================================
+    # LOCATION MISMATCH DETECTION
+    # ========================================================================
+    
+    def _check_location_mismatches(self):
+        """Check for location mismatches at end of exploration phase"""
+        for sailor_id, plan in self.sailor_plans.items():
+            if sailor_id not in self.sailors:
+                continue
+                
+            sailor = self.sailors[sailor_id]
+            if not sailor.alive:
+                continue
+            
+            claimed_location = plan.get('claimed_location')
+            claimed_day = plan.get('claimed_at_day')
+            
+            # Only check if claim was made today
+            if claimed_day != self.current_day or claimed_location is None:
+                continue
+            
+            actual_location = sailor.position
+            
+            # Calculate distance between claimed and actual
+            distance = claimed_location.distance_to(actual_location)
+            
+            # Threshold for mismatch (allow some tolerance)
+            MISMATCH_THRESHOLD = 5.0  # tiles
+            
+            if distance > MISMATCH_THRESHOLD:
+                # Generate evidence
+                self.evidence_log.add_evidence(
+                    day=self.current_day,
+                    evidence_type=EvidenceType.LOCATION_MISMATCH,
+                    description=f"{sailor_id} claimed to be at {claimed_location.to_tuple()} but was seen at {actual_location.to_tuple()} (distance: {distance:.1f})",
+                    involved_sailors=[sailor_id],
+                    strength=60,  # Moderate evidence
+                )
     
     # ========================================================================
     # ENERGY SYSTEM
@@ -670,6 +721,18 @@ def _create_world_map(rng: random.Random) -> WorldMap:
             poison_id = f"POISON_{poison_id_counter}"
             poison_id_counter += 1
             
+            # ✅ Create as a Resource object (so it can be gathered)
+            poison_resource = Resource(
+                resource_id=poison_id,
+                resource_type=ResourceType.POISON_TABLET,
+                position=pos,
+                quantity=1,
+                discovered_by=None,
+                gathered=False
+            )
+            world.resources[poison_id] = poison_resource
+            
+            # Keep in poison_tablets for quick lookups (e.g., in observations)
             world.poison_tablets[poison_id] = pos
     
     # Add level transitions - FIXED positions for consistency

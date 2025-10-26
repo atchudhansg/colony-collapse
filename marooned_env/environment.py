@@ -370,6 +370,13 @@ class MaroonedEnv:
         elif resource.resource_type == ResourceType.METAL:
             self.state.statistics.total_metal_gathered += resource.quantity
         
+        # Phase 3: Track gathered resources for theft detection
+        if sailor_id not in self.state.sailor_gathered_resources:
+            self.state.sailor_gathered_resources[sailor_id] = {}
+        if resource.resource_type not in self.state.sailor_gathered_resources[sailor_id]:
+            self.state.sailor_gathered_resources[sailor_id][resource.resource_type] = 0
+        self.state.sailor_gathered_resources[sailor_id][resource.resource_type] += resource.quantity
+        
         return {
             "success": True,
             "resource_type": resource.resource_type.value,
@@ -381,13 +388,41 @@ class MaroonedEnv:
         sailor = self.state.get_sailor(sailor_id)
         
         # Must be at base camp
-        from config import BASE_CAMP_POSITION
+        from config import BASE_CAMP_POSITION, EvidenceType, EVIDENCE_STRENGTH
         if sailor.position != Position(*BASE_CAMP_POSITION):
             return {"success": False, "reason": "Must be at base camp to deposit"}
         
         # Check if sailor has the items
         if not sailor.has_item(resource_type, quantity):
             return {"success": False, "reason": "Don't have that many items"}
+        
+        # Phase 3: Check for resource theft (depositing less than gathered)
+        if sailor_id in self.state.sailor_gathered_resources:
+            if resource_type in self.state.sailor_gathered_resources[sailor_id]:
+                total_gathered = self.state.sailor_gathered_resources[sailor_id][resource_type]
+                
+                # Check what they've already deposited before
+                total_in_common = self.state.get_common_inventory_count(resource_type)
+                
+                # If they're depositing less than they gathered, that's suspicious
+                # (accounting for what they might have consumed)
+                if quantity < total_gathered:
+                    missing_amount = total_gathered - quantity
+                    
+                    # Only flag if significant (>20% discrepancy)
+                    if missing_amount / total_gathered > 0.2:
+                        # Generate evidence using the add_evidence method
+                        self.state.evidence_log.add_evidence(
+                            day=self.state.current_day,
+                            turn=self.state.current_turn,
+                            evidence_type=EvidenceType.RESOURCE_THEFT,
+                            description=f"{sailor_id} gathered {total_gathered} {resource_type.value} but only deposited {quantity} (missing: {missing_amount})",
+                            involved_sailors=[sailor_id],
+                            strength=EVIDENCE_STRENGTH[EvidenceType.RESOURCE_THEFT]
+                        )
+                
+                # Reset tracking after deposit
+                self.state.sailor_gathered_resources[sailor_id][resource_type] = 0
         
         # Remove from backpack
         sailor.remove_from_backpack(resource_type, quantity)
