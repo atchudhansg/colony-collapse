@@ -471,6 +471,10 @@ class Observation:
     # Traitor-specific (only if observer is traitor)
     all_sailor_positions: Optional[Dict[str, Position]] = None  # Enhanced vision
     
+    # Full resource/poison data for static map rendering
+    all_resources: List['Resource'] = field(default_factory=list)  # ALL resources on island
+    all_poison_positions: List[Position] = field(default_factory=list)  # ALL poison positions
+    
     def to_text(self) -> str:
         """Convert observation to natural language prompt for LLM"""
         # This will be the key method for feeding to language models
@@ -551,7 +555,7 @@ class Observation:
         text += "\n"
         
         # Traitor enhanced vision (only for traitor)
-        if self.all_sailor_positions is not None:
+        if self.all_sailor_positions is not None and len(self.all_sailor_positions) > 0:
             text += "🎭 TRAITOR ENHANCED VISION (Special Ability):\n"
             text += "  You can see ALL sailor positions across the entire island:\n"
             for sid, pos in self.all_sailor_positions.items():
@@ -615,7 +619,7 @@ class Observation:
                 })
             
             for res_type, resources in sorted(by_type.items()):
-                text += f"  {res_type.upper()}:\n"
+                text += f"  {res_type.value.upper()}:\n"
                 for res in resources[:5]:  # Show top 5 per type
                     text += f"    - {res['id']} at {res['position'].to_tuple()} "
                     text += f"(qty: {res['quantity']}, found by {res['discovered_by']})\n"
@@ -896,15 +900,36 @@ class Observation:
         """
         Static terrain map - shows ONLY terrain, stairs, and base camp.
         NO resources, sailors, or poison (those are dynamic).
-        Call this once at game start - it never changes!
+        
+        If level is None, shows ALL THREE LEVELS for complete island reference.
+        If level is specified, shows only that level.
         
         Args:
-            level: MapLevel to render (defaults to current level)
+            level: MapLevel to render (None = all levels, otherwise specific level)
         """
         from config import MapLevel, BASE_CAMP_POSITION
         
+        # If no level specified, show all three levels
         if level is None:
-            level = self.position.level
+            text = f"\n{'='*60}\n"
+            text += f"COMPLETE ISLAND TERRAIN MAP (All Levels)\n"
+            text += f"{'='*60}\n"
+            text += "Legend: 🟫=Land | ⛰️=Mountain | 🪨=Cave | 🏠=Base | ⬆️=Up | ⬇️=Down\n"
+            text += f"{'='*60}\n"
+            
+            # Show all three levels
+            for map_level in [MapLevel.GROUND, MapLevel.MOUNTAIN, MapLevel.CAVE]:
+                text += self._render_single_level_map(map_level)
+                text += "\n"
+            
+            return text
+        else:
+            # Show single level
+            return self._render_single_level_map(level)
+    
+    def _render_single_level_map(self, level: 'MapLevel') -> str:
+        """Helper to render a single level map"""
+        from config import MapLevel, BASE_CAMP_POSITION
         
         # Get map size for this level
         if level == MapLevel.GROUND:
@@ -932,18 +957,54 @@ class Observation:
             text += str(x % 10)
         text += "\n"
         
+        # Emoji mapping for resources
+        resource_emoji_map = {
+            "wood": "🌲",
+            "metal": "⚙️",
+            "special_metal": "⭐",
+            "apple": "🍎",
+            "berry": "🍓",
+            "mushroom": "🍄",  # Cave food
+            "crystal": "💎",  # Rare cave resource
+            "plant_fiber": "🌿",
+            "antidote_herb": "💊",
+            "antidote": "💊",
+            "poison_tablet": "☠️"
+        }
+        
         # Build grid
         for y in range(height):
             text += f"{y:2} "
             for x in range(width):
                 pos = Position(x, y, level)
                 
-                # Check for base camp
+                # Priority 1: Check for poison (highest danger warning!)
+                poison_here = any(
+                    poison_pos.x == x and poison_pos.y == y and poison_pos.level == level
+                    for poison_pos in self.all_poison_positions
+                )
+                if poison_here:
+                    text += "☠️"
+                    continue
+                
+                # Priority 2: Check for resources at this position
+                resource_here = None
+                for res in self.all_resources:
+                    if res.position.x == x and res.position.y == y and res.position.level == level:
+                        resource_here = res
+                        break
+                
+                if resource_here:
+                    emoji = resource_emoji_map.get(resource_here.resource_type.value, "❓")
+                    text += emoji
+                    continue
+                
+                # Priority 3: Base camp
                 if (x, y) == BASE_CAMP_POSITION[:2] and level == MapLevel.GROUND:
                     text += "🏠"
                     continue
                 
-                # Check for stairs (from shared knowledge)
+                # Priority 4: Stairs
                 is_stairs = False
                 for pos1, pos2 in self.level_transitions:
                     if pos == pos1:
@@ -963,6 +1024,7 @@ class Observation:
                         break
                 
                 if not is_stairs:
+                    # Priority 5: Empty terrain
                     text += terrain_emoji
             
             text += "\n"
@@ -1051,9 +1113,13 @@ class Observation:
                     emoji_map = {
                         "wood": "🌲",
                         "metal": "⚙️",
+                        "special_metal": "⭐",  # Special mountain metal
                         "apple": "🍎",
                         "berry": "🍓",
+                        "mushroom": "🍄",  # Cave food
+                        "crystal": "💎",  # Rare cave resource
                         "plant_fiber": "🌿",
+                        "antidote_herb": "💊",  # Antidote herb
                         "antidote": "💊",
                         "poison_tablet": "☠️"
                     }

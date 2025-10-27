@@ -162,6 +162,10 @@ class GameState:
     seed: int = 42
     rng: random.Random = field(default_factory=random.Random)
     
+    # Static map snapshots (frozen at game start, never update)
+    initial_resources: List['Resource'] = field(default_factory=list)
+    initial_poison_positions: List['Position'] = field(default_factory=list)
+    
     def __post_init__(self):
         """Initialize RNG with seed"""
         self.rng.seed(self.seed)
@@ -643,6 +647,10 @@ def create_initial_game_state(seed: int = None, sailor_names: List[str] = None) 
     
     # Initialize turn order
     state.initialize_turn_order()
+    
+    # 📸 Create frozen snapshots for static map (never updates after this point)
+    state.initial_resources = list(state.world_map.resources.values())
+    state.initial_poison_positions = list(state.world_map.poison_tablets.values())
     
     return state
 
