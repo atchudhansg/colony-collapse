@@ -341,7 +341,7 @@ class MaroonedEnv:
         energy_cost = ENERGY_COST_WALK
         if self.state.is_traitor(sailor_id):
             from config import TRAITOR_ENERGY_MULTIPLIER
-            energy_cost = int(energy_cost * TRAITOR_ENERGY_MULTIPLIER)
+            energy_cost = max(1, int(energy_cost * TRAITOR_ENERGY_MULTIPLIER))  # Minimum 1 energy
         
         if not self.state.consume_energy(sailor_id, energy_cost):
             return {"success": False, "reason": "Not enough energy"}
@@ -392,7 +392,7 @@ class MaroonedEnv:
         # Apply traitor energy bonus
         if self.state.is_traitor(sailor_id):
             from config import TRAITOR_ENERGY_MULTIPLIER
-            energy_cost = int(energy_cost * TRAITOR_ENERGY_MULTIPLIER)
+            energy_cost = max(1, int(energy_cost * TRAITOR_ENERGY_MULTIPLIER))  # Minimum 1 energy
         
         if not self.state.consume_energy(sailor_id, energy_cost):
             return {"success": False, "reason": "Not enough energy"}
@@ -1315,6 +1315,12 @@ class MaroonedEnv:
         # Get recent messages
         recent_messages = self.state.message_history[-20:]  # Last 20 messages
         
+        # Static map shows INITIAL snapshot (frozen at game start, never updates)
+        all_resources = list(self.state.initial_resources)  # Frozen snapshot
+        
+        # Collect ALL poison positions for static map (also frozen)
+        all_poison_positions = list(self.state.initial_poison_positions)
+        
         # Create observation
         obs = Observation(
             sailor_id=sailor_id,
@@ -1339,6 +1345,8 @@ class MaroonedEnv:
             weather=self.state.weather,
             current_vote=self.state.current_vote,  # TIER 2 FIX: Active voting session
             voting_history=self.state.voting_history.copy(),  # TIER 2 FIX: Past votes
+            all_resources=all_resources,  # For static map rendering
+            all_poison_positions=all_poison_positions,  # For static map rendering
         )
         
         # Traitor gets enhanced vision

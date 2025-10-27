@@ -14,18 +14,23 @@ from config import ActionType, ResourceType, ShipComponent, MapLevel
 # 6.1 OBSERVATION → PROMPT TEXT
 # ============================================================================
 
-def observation_to_prompt(obs: Observation, include_role: bool = False, sailor_role: str = "colonist") -> str:
+def observation_to_prompt(obs: Observation, include_role: bool = False, sailor_role: str = None) -> str:
     """
     Convert an Observation into a structured text prompt for LLM.
     
     Args:
         obs: The observation object
         include_role: Whether to reveal the sailor's role (colonist/traitor)
-        sailor_role: The actual role if include_role is True
+        sailor_role: The actual role if include_role is True (None = auto-detect from observation)
     
     Returns:
         Formatted prompt string
     """
+    # Auto-detect role from observation if not provided
+    if include_role and sailor_role is None:
+        # Traitor has all_sailor_positions populated
+        sailor_role = "traitor" if (obs.all_sailor_positions is not None and len(obs.all_sailor_positions) > 0) else "colonist"
+    
     # Use the built-in to_text() method as base
     base_text = obs.to_text()
     
