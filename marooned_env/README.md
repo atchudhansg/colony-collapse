@@ -129,24 +129,9 @@ SAILOR STATUS:
 
 SHIP PROGRESS: 18% (Hull: 60% | Mast: 0%)
 ```
-
 ---
 
-## Technical Specifications
-
-| Specification | Value |
-|---------------|-------|
-| **Episode Length** | 10,000 steps (100 days × 100 turns) |
-| **Observation Space** | ~875 tokens natural language (15 structured fields) |
-| **Action Space** | 14 action types × contextual parameters |
-| **State Complexity** | 1,350 tiles × 5 agents × 20 inventory slots ≈ **billions of states** |
-| **Vision System** | Partial (5-tile radius) vs global (traitor advantage) |
-| **Reward Structure** | Sparse, delayed, multi-objective (colonist vs traitor) |
-| **Communication** | Natural language messages, rate-limited (1 per 10 turns) |
-
----
-
-## Why This Is Impressive
+## Key Features
 
 **Multi-Agent Coordination**: 5 agents with asymmetric information (colonists see 5-tile radius, traitor sees everything)
 
