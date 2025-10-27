@@ -618,7 +618,8 @@ class Observation:
                     'discovered_by': res_data['discovered_by']
                 })
             
-            for res_type, resources in sorted(by_type.items()):
+            # Sort by resource type name (convert enum to string for sorting)
+            for res_type, resources in sorted(by_type.items(), key=lambda x: x[0].value):
                 text += f"  {res_type.value.upper()}:\n"
                 for res in resources[:5]:  # Show top 5 per type
                     text += f"    - {res['id']} at {res['position'].to_tuple()} "
