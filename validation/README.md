@@ -22,9 +22,7 @@ This folder contains notebooks used to validate AMD MI300X + ROCm compatibility
 - ROCm-specific environment variables
 - Standard AdamW optimizer (bitsandbytes 8-bit not available on ROCm)
 
-**Status:** ✅ Validation complete - all optimizations migrated to main MAROONED training pipeline.
 
----
 
 **Note:** This is NOT the main project submission. For the actual MAROONED multi-agent environment and training, see:
 - Main training: `notebooks/Train_Marooned_RL.ipynb`
