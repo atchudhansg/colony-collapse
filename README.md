@@ -89,6 +89,81 @@ Episode → Assign Roles → 10,000 Steps → Collect Experience → PPO Update
 
 ---
 
+## OpenEnv API Compliance
+
+MAROONED implements the **OpenEnv** standard for custom RL environments, making it compatible with any RL training framework (TRL, CleanRL, RLlib, etc.).
+
+### Core API Methods
+
+```python
+from marooned_env import MaroonedEnv
+
+env = MaroonedEnv()
+
+# Standard Gym API
+observations, info = env.reset()           # Initialize 5 sailors
+obs, rewards, dones, truncated, info = env.step(actions)  # Multi-agent step
+env.render()                               # Visualize game state
+env.close()                                # Cleanup resources
+
+# OpenEnv Extensions
+env_info = env.info()                      # Environment metadata
+env.validate_action(sailor_id, action)     # Pre-check action legality
+prompt = env.observation_to_prompt(obs, role)  # Convert state → LLM input
+```
+
+### Multi-Agent Design
+
+Unlike single-agent environments, MAROONED manages **5 simultaneous agents** with:
+- **Asymmetric roles**: Traitor gets different observations (global vision, energy bonus)
+- **Structured actions**: `{"sailor_id": "alice", "action": "GATHER", "target": "WOOD_001"}`
+- **Per-agent rewards**: Colonists maximize ship progress, traitor maximizes sabotage
+- **Episode termination**: Ship 100% OR <3 sailors alive OR Day 100 timeout
+
+### What Agents Can Access (Dynamic Environment)
+
+**Vision & Maps**:
+- **Colonists**: 11×11 tile grid centered on position (limited fog-of-war)
+- **Traitor**: Global 30×30+ map view (sees all sailor positions in real-time)
+- **Dynamic updates**: Map changes as resources depleted, evidence accumulates, ship built
+
+**Movement & Exploration**:
+- `MOVE_FORWARD`, `MOVE_BACKWARD`, `MOVE_LEFT`, `MOVE_RIGHT` (cardinal + diagonal)
+- **Energy-based navigation**: Mountain (+2 level) costs 15 energy, caves (-1 level) cost 8
+- **Real-time position tracking**: Other sailors visible only within vision radius (except traitor)
+
+**Resource Interaction**:
+- `GATHER` wood/metal/food from adjacent tiles (auto-removed from map)
+- `DEPOSIT` items into shared ship inventory (persistent state)
+- `CONSUME` food to restore energy (dynamic health management)
+- `BUILD` ship components when 2+ sailors adjacent (collaborative actions)
+
+**Traitor-Specific Actions**:
+- `SABOTAGE` ship progress secretly (-30% component integrity)
+- `POISON` food items in another sailor's inventory (3-day delayed death)
+- `PLANT_EVIDENCE` to frame innocent sailors (one-time ability)
+- `HIDE_ITEM` (up to 2 items invisible during inspections)
+
+**Social Mechanics**:
+- `SEND_MESSAGE` broadcasts to all sailors (rate-limited: 1 per 10 turns during exploration)
+- `VOTE` to eliminate suspected traitor (democratic decision-making)
+- **Evidence feed**: Auto-generated logs update in real-time (location mismatches, poison sightings, resource theft)
+
+**Why This Is Dynamic**:
+- State evolves based on *all* agent actions (multi-agent dependencies)
+- No scripted events — deception emerges from learned behavior
+- 1,350+ tiles × 5 agents × 20 inventory slots = billions of unique configurations
+
+### Why OpenEnv?
+
+**Standardization**: Drop-in replacement for any Gym-compatible trainer (no custom wrappers needed)
+
+**Flexibility**: Swap in different LLMs (GPT-4, Claude, Gemini) by changing `observation_to_prompt()` only
+
+**Reproducibility**: Seeded environments for deterministic evaluation and ablation studies
+
+---
+
 ## How It Works: The Complete Flow
 
 ```
@@ -223,17 +298,6 @@ notebooks/
 - Social game AI (Werewolf, Mafia, Diplomacy)
 
 ---
-
-## Citation
-
-```bibtex
-@software{marooned2025,
-  title   = {MAROONED: A Multi-Agent Deception Environment for Reinforcement Learning},
-  author  = {Atchudhan SG},
-  year    = {2025},
-  note    = {OpenEnv Hackathon 2025 Submission}
-}
-```
 
 ---
 
