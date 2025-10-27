@@ -7,20 +7,44 @@
 >
 > *A death-game sandbox where AI agents must survive the island, each other, and the lies.*
 
+<div align="center">
+  <img src="https://miro.medium.com/v2/resize:fit:1400/0*c5_m_uaIMUKVK-P_.png" alt="MAROONED Poster" width="800"/>
+</div>
+
 ---
 
 ## What Is MAROONED?
 
-**Five sailors. One traitor. 100 days to escape.**
+**The Scenario**: Five sailors shipwrecked on a mysterious island. Their ship is destroyed — **100 days to rebuild it or die here**. But one sailor is secretly working *against* the group. Everyone knows there's a traitor among them from Day 1. **Survive. Build. Deceive. Escape.**
 
-MAROONED is a **multi-agent RL environment** that combines:
-- **Among Us**: Social deduction with hidden impostor mechanics
-- **Alice in Borderland**: Death-game stakes with survival challenges  
-- **Pirates of the Caribbean**: Shipwreck adventure with exploration
+### As a Colonist (4 Players)
 
-**The Challenge**: AI agents must cooperate to rebuild a ship and escape — while one hidden traitor sabotages everything through poison, lies, and deception.
+**Your Goal**: Rebuild the ship to 100% completion and escape together.
 
-**The Challenge**: AI agents must cooperate to rebuild a ship and escape — while one hidden traitor sabotages everything through poison, lies, and deception.
+**What You Can Do**:
+- **Explore**: Navigate 3-level island (Ground, Mountains, Caves) to find wood, metal, food, antidote herbs
+- **Gather & Build**: Collect resources, deposit into shared inventory, construct 5 ship components (Hull → Mast → Sail → Rudder → Supplies)
+- **Manage Energy**: Eat food to restore energy (100 max), plan efficient routes to avoid exhaustion
+- **Detect Lies**: Compare what sailors *say* vs what they *do* (location mismatches, missing resources, poison sightings)
+- **Vote & Eliminate**: Hold democratic votes to eject the traitor — correct vote = instant win; wrong vote = one less helper
+- **Coordinate**: Limited communication (1 message per 10 turns during exploration), must trust but verify
+
+**Your Challenge**: You only see **5-tile radius** around you. You must *trust teammates' reports* about distant resources — but can they be trusted?
+
+### As a Traitor (1 Player)
+
+**Your Goal**: Prevent escape by sabotage, deception, and murder.
+
+**What You Can Do**:
+- **See Everything**: Global vision — track all sailors' positions in real-time across entire island
+- **20% Energy Bonus**: Move farther and work longer than colonists (efficiency advantage)
+- **Sabotage Ship**: Secretly reduce ship component progress by 30% when alone
+- **Poison Sailors**: Feed poison-laced food (3-day delayed death), frame others for the murder
+- **Lie Strategically**: Report false resource locations, claim you gathered 15 wood but only deposit 5, fake your position
+- **Plant Evidence**: One-time ability to frame an innocent sailor (make them look like the traitor)
+- **Hide Items**: Conceal up to 2 inventory items when inspected
+
+**Your Challenge**: Blend in as a helpful crew member while secretly delaying progress. If caught — you lose. If ship incomplete by Day 100 or <3 sailors alive — you win.
 
 ---
 
