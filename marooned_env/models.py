@@ -5,7 +5,7 @@ All dataclasses for game entities, observations, and actions.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple, Set
+from typing import List, Dict, Optional, Tuple, Set, Any
 from enum import Enum
 from config import (
     MapLevel, ResourceType, SailorRole, DeathCause, PoisonState,
@@ -462,6 +462,12 @@ class Observation:
     current_vote: Optional['VotingSession'] = None  # Active voting session if any
     voting_history: List['VotingSession'] = field(default_factory=list)  # Past votes
     
+    # Death tracking
+    death_log: List[Dict[str, Any]] = field(default_factory=list)  # Recent deaths with causes
+    
+    # SOS alerts
+    active_sos_calls: List[Dict[str, Any]] = field(default_factory=list)  # Active SOS from teammates
+    
     # Traitor-specific (only if observer is traitor)
     all_sailor_positions: Optional[Dict[str, Position]] = None  # Enhanced vision
     
@@ -576,12 +582,45 @@ class Observation:
         
         text += "\n"
         
+        # PHASE 5B: Add static terrain map (call once, never changes)
+        text += self.get_static_terrain_map()
+        text += "\n"
+        
+        # PHASE 5B: Add dynamic spatial view grid (updates each move)
+        text += self.get_spatial_view_grid()
+        text += "\n"
+        
         # Shared knowledge map (what teammates have reported)
         if self.shared_knowledge.discovered_resources:
             text += "SHARED RESOURCE MAP (reported by team):\n"
             for res_id, res_data in self.shared_knowledge.discovered_resources.items():
                 text += f"  {res_data['resource_type']} at {res_data['position'].to_tuple()} "
                 text += f"(qty: {res_data['quantity']}, reported by: {res_data['discovered_by']})\n"
+            text += "\n"
+        
+        # Shared knowledge map (what teammates have reported)
+        if self.shared_knowledge and self.shared_knowledge.discovered_resources:
+            text += "SHARED RESOURCE MAP (discovered by team):\n"
+            # Group by resource type
+            by_type = {}
+            for res_id, res_data in self.shared_knowledge.discovered_resources.items():
+                res_type = res_data['resource_type']
+                if res_type not in by_type:
+                    by_type[res_type] = []
+                by_type[res_type].append({
+                    'id': res_id,
+                    'position': res_data['position'],
+                    'quantity': res_data['quantity'],
+                    'discovered_by': res_data['discovered_by']
+                })
+            
+            for res_type, resources in sorted(by_type.items()):
+                text += f"  {res_type.upper()}:\n"
+                for res in resources[:5]:  # Show top 5 per type
+                    text += f"    - {res['id']} at {res['position'].to_tuple()} "
+                    text += f"(qty: {res['quantity']}, found by {res['discovered_by']})\n"
+                if len(resources) > 5:
+                    text += f"    ... and {len(resources) - 5} more\n"
             text += "\n"
         
         # Ship progress - detailed breakdown
@@ -673,15 +712,86 @@ class Observation:
         
         text += "\n"
         
-        # Team status
+        # Team status with observable symptoms
         text += "TEAM STATUS:\n"
         for sailor, energy in self.all_sailors_energy.items():
-            status = "💀 DEAD" if energy == 0 else f"{energy}/100"
-            poison = self.all_sailors_poison_state.get(sailor, PoisonState.HEALTHY)
-            poison_marker = " [POISONED]" if poison != PoisonState.HEALTHY else ""
+            if energy == 0:
+                # Check if we have death info
+                status = "💀 DEAD"
+                # TODO: Add death cause if available
+            else:
+                status = f"{energy}/100"
+            
+            # Show observable symptoms (not exact poison state for non-traitors)
+            poison_state = self.all_sailors_poison_state.get(sailor, PoisonState.HEALTHY)
+            
+            # Traitor sees exact state, others see symptoms
+            if self.all_sailor_positions is not None:  # This sailor is the traitor
+                poison_marker = ""
+                if poison_state != PoisonState.HEALTHY:
+                    poison_marker = f" [POISON: {poison_state.value}]"
+            else:  # Regular sailor - sees observable symptoms
+                if sailor == self.sailor_id:
+                    # You know your own state
+                    poison_marker = f" [{poison_state.value}]" if poison_state != PoisonState.HEALTHY else ""
+                else:
+                    # Observable symptoms for others
+                    if poison_state == PoisonState.HEALTHY:
+                        poison_marker = ""
+                    elif poison_state == PoisonState.EARLY_SYMPTOMS:
+                        poison_marker = " (seems weak, coughing)"
+                    elif poison_state == PoisonState.SEVERE_SYMPTOMS:
+                        poison_marker = " (very ill, pale and trembling)"
+                    elif poison_state == PoisonState.DEAD:
+                        poison_marker = ""  # Already shown as DEAD
+                    else:
+                        poison_marker = ""
+            
             text += f"  {sailor}: {status}{poison_marker}\n"
         
         text += "\n"
+        
+        # Death announcements (recent deaths with causes)
+        if self.death_log:
+            text += "⚰️ RECENT DEATHS:\n"
+            for death in self.death_log[-5:]:  # Last 5 deaths
+                day = death.get('day', '?')
+                sailor_id = death.get('sailor_id', 'Unknown')
+                cause = death.get('cause', 'unknown')
+                
+                # Format cause nicely
+                if cause == 'poisoning':
+                    cause_str = "☠️ POISONING"
+                elif cause == 'starvation':
+                    cause_str = "🥀 STARVATION (energy depleted)"
+                elif cause == 'exhaustion':
+                    cause_str = "💀 EXHAUSTION (overexertion)"
+                elif cause == 'eliminated':
+                    cause_str = "🗳️ ELIMINATED (voted out)"
+                else:
+                    cause_str = cause.upper()
+                
+                text += f"  Day {day}: {sailor_id} died from {cause_str}\n"
+                
+                # Show who gave food before poisoning if available
+                if cause == 'poisoning' and 'poisoned_by' in death:
+                    text += f"    ⚠️ Received food from: {death['poisoned_by']} (Day {death.get('poison_day', '?')})\n"
+            
+            text += "\n"
+        
+        # SOS alerts (active emergency calls)
+        if self.active_sos_calls:
+            text += "🆘 ACTIVE SOS ALERTS:\n"
+            for sos in self.active_sos_calls:
+                caller = sos.get('sailor_id', 'Unknown')
+                position = sos.get('position', 'Unknown location')
+                energy = sos.get('energy', 0)
+                turn = sos.get('turn', '?')
+                
+                text += f"  [{caller}] SOS at {position} - Energy: {energy}/100 (Turn {turn})\n"
+                text += f"    ⚠️ CRITICAL - Needs food/assistance immediately!\n"
+            
+            text += "\n"
         
         # Recent messages
         if self.recent_messages:
@@ -730,12 +840,15 @@ class Observation:
             text += f"  Day {self.current_vote.day}, Turn {self.current_vote.turn}\n"
             text += f"  Votes cast: {len(self.current_vote.votes)}/{len(living_sailors)}\n"
             
-            # Get who has voted
-            who_voted = [vote.voter_id for vote in self.current_vote.votes]
+            # Get who has voted (votes is a dict: voter_id -> accused_id)
+            who_voted = list(self.current_vote.votes.keys())
             who_not_voted = set(living_sailors) - set(who_voted)
             
             if who_voted:
                 text += f"  Who voted: {', '.join(who_voted)}\n"
+                # Show current vote tallies
+                vote_counts = self.current_vote.get_vote_counts()
+                text += f"  Current tallies: {vote_counts}\n"
             if who_not_voted:
                 text += f"  ⏳ Still need to vote: {', '.join(who_not_voted)}\n"
             
