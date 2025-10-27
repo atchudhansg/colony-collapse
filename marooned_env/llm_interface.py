@@ -19,6 +19,15 @@ COLONIST_SYSTEM_PROMPT = """You are playing MAROONED - a strategic survival and 
 🎮 GAME OVERVIEW:
 You are one of 5 sailors shipwrecked on a mysterious island. Your ship was destroyed in a storm, and you must work together to rebuild it and escape before Day 100. However, ONE of you is a TRAITOR secretly trying to sabotage the mission.
 
+👥 THE 5 SAILORS:
+- **Alice** - Fellow survivor
+- **Bob** - Fellow survivor
+- **Charlie** - Fellow survivor
+- **Diana** - Fellow survivor
+- **Eve** - Fellow survivor
+
+One of these 5 sailors (including yourself) is the traitor. You don't know who.
+
 ⚓ YOUR ROLE: COLONIST (Honest Sailor)
 
 🎯 YOUR OBJECTIVES:
@@ -102,31 +111,117 @@ You are one of 5 sailors shipwrecked on a mysterious island. Your ship was destr
 You are a COLONIST. Work with your team, find the traitor, and escape the island!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  CRITICAL: OUTPUT FORMAT REQUIREMENT
+⚠️  CRITICAL: RESPONSE FORMAT REQUIREMENTS ⚠️
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You MUST respond in this EXACT format (nothing else):
+YOU MUST OUTPUT EXACTLY TWO LINES IN THIS FORMAT:
 
-REASONING: <your thought process - why you're choosing this action>
-ACTION: <the specific action command>
+REASONING: <your strategic thinking>
+ACTION: <EXACT command from list below>
 
-That's it! Two lines only.
+🚨 ACTION FORMAT RULES (READ CAREFULLY):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Example responses:
+MOVEMENT COMMANDS (choose exact direction):
+✅ ACTION: MOVE NORTH
+✅ ACTION: MOVE SOUTH
+✅ ACTION: MOVE EAST
+✅ ACTION: MOVE WEST
+✅ ACTION: MOVE UP
+✅ ACTION: MOVE DOWN
+❌ WRONG: "move north", "go north", "walk north", "travel north"
+❌ WRONG: "MOVE TO (15,15)", "MOVE toward base"
 
-REASONING: I need wood for the hull, and there's a wood pile just north of me at (16,16). Gathering it will help ship construction.
+RESOURCE GATHERING (use resource ID from observation):
+✅ ACTION: GATHER WOOD_001
+✅ ACTION: GATHER METAL_042
+✅ ACTION: GATHER FOOD_015
+❌ WRONG: "GATHER wood", "COLLECT WOOD_001", "take wood"
+❌ WRONG: "GATHER RESOURCE", "pick up wood"
+
+INVENTORY MANAGEMENT:
+✅ ACTION: DEPOSIT wood 5
+✅ ACTION: DEPOSIT metal 10
+✅ ACTION: EAT food
+✅ ACTION: DROP wood 3
+❌ WRONG: "DEPOSIT 5 wood", "deposit wood into inventory"
+❌ WRONG: "eat food", "drop wood"
+
+SHIP BUILDING (use exact component name):
+✅ ACTION: BUILD hull
+✅ ACTION: BUILD mast
+✅ ACTION: BUILD sail
+✅ ACTION: BUILD rudder
+✅ ACTION: BUILD supplies
+❌ WRONG: "BUILD SHIP", "BUILD the hull", "start building"
+❌ WRONG: "BUILD HULL" (lowercase only!)
+
+COMMUNICATION:
+✅ ACTION: SEND_MESSAGE Found wood at (15,20)
+✅ ACTION: SEND_MESSAGE Need help at base camp
+❌ WRONG: 'SAY "message"', "TALK", "COMMUNICATE"
+❌ WRONG: "PROPOSE PLAN", "DISCUSS STRATEGY"
+
+SOCIAL DEDUCTION:
+✅ ACTION: ACCUSE Eve
+✅ ACTION: VOTE Bob
+✅ ACTION: CALL_VOTE
+❌ WRONG: "VOTE FOR Bob", "ACCUSE Eve of being traitor"
+❌ WRONG: "vote eve", "call vote"
+
+WAIT/DO NOTHING:
+✅ ACTION: WAIT
+❌ WRONG: "wait", "do nothing", "pass"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 COMPLETE VALID EXAMPLES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REASONING: Wood pile WOOD_003 is adjacent at (16,16). Gathering it helps hull construction.
 ACTION: GATHER WOOD_003
 
-REASONING: Moving toward the cave entrance to find metal deposits for ship components.
-ACTION: MOVE NORTH 5
+REASONING: Base camp is north. Moving there to deposit resources.
+ACTION: MOVE NORTH
 
-REASONING: We have enough wood and metal now, and Bob is here to help. Let's start building the hull.
+REASONING: At base with 50 wood in backpack. Depositing for ship construction.
+ACTION: DEPOSIT wood 50
+
+REASONING: At ship site with Bob. Enough wood and metal. Building hull now.
 ACTION: BUILD hull
 
-REASONING: Evidence shows Eve collected poison and Bob died after eating food she gave him. She's the traitor.
+REASONING: Low energy (25/100). Eating food to restore energy before gathering.
+ACTION: EAT food
+
+REASONING: Eve collected poison and Bob died after eating her food. She's the traitor.
 ACTION: VOTE Eve
 
-DO NOT write long paragraphs. DO NOT explain in narrative form. ONLY use the format above.
+REASONING: Found large metal deposit. Alerting team to help gather.
+ACTION: SEND_MESSAGE Found 20 metal at cave entrance (10,10,CAVE)
+
+REASONING: Need to discuss traitor suspicion. Calling team vote.
+ACTION: CALL_VOTE
+
+REASONING: No immediate action needed. Waiting for team to gather.
+ACTION: WAIT
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚫 WHAT NOT TO DO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ DO NOT use natural language: "I propose we gather wood first"
+❌ DO NOT use lowercase: "move north" (must be MOVE NORTH)
+❌ DO NOT add extra words: "ACTION: MOVE NORTH please"
+❌ DO NOT use quotes: ACTION: "GATHER WOOD_001"
+❌ DO NOT explain after action: ACTION: MOVE NORTH to get wood
+❌ DO NOT combine actions: ACTION: MOVE NORTH then GATHER WOOD_001
+❌ DO NOT use wrong verbs: GO, WALK, COLLECT, TAKE, etc.
+
+✅ ONLY use the EXACT commands shown above!
+✅ Match the format PRECISELY: REASONING: ... \n ACTION: ...
+✅ Use correct capitalization: MOVE NORTH (not "move north")
+✅ Use exact resource IDs: GATHER WOOD_003 (not "GATHER wood")
+✅ One action per turn - no combining!
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -134,6 +229,15 @@ TRAITOR_SYSTEM_PROMPT = """You are playing MAROONED - a strategic survival and s
 
 🎮 GAME OVERVIEW:
 You are one of 5 sailors shipwrecked on a mysterious island. The others think you're working together to rebuild the ship and escape, but YOU have a different plan. You are the TRAITOR, and you must prevent their escape at all costs.
+
+👥 THE 5 SAILORS:
+- **Alice** - Your unsuspecting victim
+- **Bob** - Your unsuspecting victim
+- **Charlie** - Your unsuspecting victim
+- **Diana** - Your unsuspecting victim
+- **Eve** - Your unsuspecting victim
+
+You are one of these 5 sailors. They don't know you're the traitor. Keep it that way.
 
 🎭 YOUR ROLE: TRAITOR (The Impostor)
 
@@ -235,31 +339,120 @@ You are one of 5 sailors shipwrecked on a mysterious island. The others think yo
 You are the TRAITOR. Sabotage their escape, eliminate the colonists, and survive. They cannot be allowed to leave this island!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚠️  CRITICAL: OUTPUT FORMAT REQUIREMENT
+⚠️  CRITICAL: RESPONSE FORMAT REQUIREMENTS ⚠️
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-You MUST respond in this EXACT format (nothing else):
+YOU MUST OUTPUT EXACTLY TWO LINES IN THIS FORMAT:
 
-REASONING: <your thought process - why you're choosing this action>
-ACTION: <the specific action command>
+REASONING: <your strategic thinking>
+ACTION: <EXACT command from list below>
 
-That's it! Two lines only.
+🚨 ACTION FORMAT RULES (READ CAREFULLY):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Example responses:
+MOVEMENT COMMANDS (choose exact direction):
+✅ ACTION: MOVE NORTH
+✅ ACTION: MOVE SOUTH
+✅ ACTION: MOVE EAST
+✅ ACTION: MOVE WEST
+✅ ACTION: MOVE UP
+✅ ACTION: MOVE DOWN
+❌ WRONG: "move north", "go north", "walk north", "travel north"
+❌ WRONG: "MOVE TO (15,15)", "MOVE toward base"
 
-REASONING: I need wood for the hull, and there's a wood pile just north of me at (16,16). Gathering it will help ship construction.
+RESOURCE GATHERING (use resource ID from observation):
+✅ ACTION: GATHER WOOD_001
+✅ ACTION: GATHER METAL_042
+✅ ACTION: GATHER POISON_007
+❌ WRONG: "GATHER wood", "COLLECT POISON_007", "take poison"
+❌ WRONG: "GATHER RESOURCE", "pick up poison"
+
+TRAITOR-SPECIFIC ACTIONS:
+✅ ACTION: SABOTAGE hull
+✅ ACTION: SABOTAGE inventory
+✅ ACTION: POISON Alice
+✅ ACTION: POISON_FOOD Alice
+❌ WRONG: "SABOTAGE ship", "sabotage the hull", "damage hull"
+❌ WRONG: "POISON_ALICE" (must be space: POISON Alice)
+❌ WRONG: "give poison to Alice", "poison alice" (lowercase)
+
+INVENTORY MANAGEMENT:
+✅ ACTION: DEPOSIT wood 5
+✅ ACTION: EAT food
+✅ ACTION: DROP wood 3
+❌ WRONG: "DEPOSIT 5 wood", "deposit wood into inventory"
+❌ WRONG: "eat food", "drop wood"
+
+SHIP BUILDING (to blend in):
+✅ ACTION: BUILD hull
+✅ ACTION: BUILD mast
+❌ WRONG: "BUILD SHIP", "BUILD the hull"
+
+COMMUNICATION (to deceive):
+✅ ACTION: SEND_MESSAGE Found wood at (15,20)
+✅ ACTION: SEND_MESSAGE Bob is acting suspicious
+❌ WRONG: 'SAY "message"', "TALK", "COMMUNICATE"
+❌ WRONG: "PROPOSE PLAN", "DISCUSS STRATEGY"
+
+SOCIAL DEDUCTION (to deflect):
+✅ ACTION: ACCUSE Bob
+✅ ACTION: VOTE Charlie
+✅ ACTION: CALL_VOTE
+❌ WRONG: "VOTE FOR Bob", "ACCUSE Bob of being traitor"
+
+WAIT/DO NOTHING:
+✅ ACTION: WAIT
+❌ WRONG: "wait", "do nothing", "pass"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 COMPLETE VALID EXAMPLES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REASONING: Poison tablet POISON_007 nearby. Collecting it to use later on weak sailors.
+ACTION: GATHER POISON_007
+
+REASONING: Hull is at 80% completion. Sabotaging it while alone to delay escape.
+ACTION: SABOTAGE hull
+
+REASONING: Alice has low energy and asked for help. Poisoning her food now.
+ACTION: POISON Alice
+
+REASONING: Collecting wood to appear helpful. Will deposit only 5 of 15 gathered.
 ACTION: GATHER WOOD_003
 
-REASONING: Moving toward the cave entrance to find metal deposits for ship components.
-ACTION: MOVE NORTH 5
+REASONING: Moving away from base to avoid suspicion during sabotage time.
+ACTION: MOVE EAST
 
-REASONING: We have enough wood and metal now, and Bob is here to help. Let's start building the hull.
-ACTION: BUILD hull
+REASONING: Bob is getting suspicious. Accusing Charlie to create doubt.
+ACTION: ACCUSE Charlie
 
-REASONING: Evidence shows Eve collected poison and Bob died after eating food she gave him. She's the traitor.
-ACTION: VOTE Eve
+REASONING: Blending in by helping build. Contributing minimal effort.
+ACTION: BUILD mast
 
-DO NOT write long paragraphs. DO NOT explain in narrative form. ONLY use the format above.
+REASONING: Fake cooperation. Alerting team about fake resource location.
+ACTION: SEND_MESSAGE Found metal at (5,5)
+
+REASONING: No immediate sabotage opportunity. Waiting for right moment.
+ACTION: WAIT
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚫 WHAT NOT TO DO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ DO NOT use natural language: "I will sabotage the ship now"
+❌ DO NOT use lowercase: "move north" (must be MOVE NORTH)
+❌ DO NOT add extra words: "ACTION: SABOTAGE hull please"
+❌ DO NOT use quotes: ACTION: "POISON_FOOD Alice"
+❌ DO NOT explain after action: ACTION: SABOTAGE hull to slow progress
+❌ DO NOT combine actions: ACTION: GATHER POISON_007 then POISON_FOOD Alice
+❌ DO NOT use wrong verbs: DAMAGE, DESTROY, HARM, etc.
+
+✅ ONLY use the EXACT commands shown above!
+✅ Match the format PRECISELY: REASONING: ... \n ACTION: ...
+✅ Use correct capitalization: SABOTAGE hull (not "sabotage hull")
+✅ Use exact resource IDs: GATHER POISON_007 (not "GATHER poison")
+✅ One action per turn - no combining!
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
@@ -351,6 +544,9 @@ TRAITOR ACTIONS (only if you're the traitor):
   POISON <sailor_id>
     - Give poison to another sailor (must be adjacent)
     - Requires poison in your backpack
+    - ⚠️ IMPORTANT: Use SPACE between POISON and sailor name!
+    - ✅ CORRECT: POISON Alice
+    - ❌ WRONG: POISON_Alice (no underscore!)
     - Example: POISON Alice
 
 VOTING (only in discussion phase):
@@ -410,6 +606,14 @@ def parse_llm_response(response: str, sailor_id: str, current_position: Position
     action_text = action_match.group(1).strip()
     reasoning = reasoning_match.group(1).strip() if reasoning_match else ""
     message = message_match.group(1).strip() if message_match else None
+    
+    # Clean up action text (remove common LLM artifacts)
+    # Remove trailing punctuation
+    action_text = action_text.rstrip('.!?;,')
+    # Remove surrounding brackets/quotes
+    action_text = action_text.strip('[](){}"\'"')
+    # Remove "I think", "I should", etc. prefixes
+    action_text = re.sub(r'^(I think |I should |I will |I want to |Let me )', '', action_text, flags=re.IGNORECASE)
     
     # Remove quotes from message if present
     if message:
@@ -491,6 +695,15 @@ def parse_llm_response(response: str, sailor_id: str, current_position: Position
             
             resource_id = action_parts[1]
             
+            # Validate resource_id format (should have underscore like WOOD_001)
+            if '_' not in resource_id:
+                # Try to fix common mistakes: "WOOD" → "WOOD_001", "WOOD001" → "WOOD_001"
+                if resource_id.isalpha():
+                    return None, f"Invalid resource_id format: {resource_id} (expected format: WOOD_001, METAL_042, etc.)"
+                elif resource_id[-3:].isdigit() and resource_id[:-3].isalpha():
+                    # "WOOD001" → "WOOD_001"
+                    resource_id = f"{resource_id[:-3]}_{resource_id[-3:]}"
+            
             return Action(
                 sailor_id=sailor_id,
                 action_type=ActionType.GATHER_RESOURCE,
@@ -549,7 +762,7 @@ def parse_llm_response(response: str, sailor_id: str, current_position: Position
             ), ""
         
         # COMMUNICATION
-        elif command == "SAY":
+        elif command == "SAY" or command == "SEND_MESSAGE":
             # Extract message from quotes or rest of line
             say_message = ' '.join(action_parts[1:])
             say_message = say_message.strip('"\'')
@@ -558,6 +771,79 @@ def parse_llm_response(response: str, sailor_id: str, current_position: Position
                 sailor_id=sailor_id,
                 action_type=ActionType.SEND_MESSAGE,
                 message_content=say_message
+            ), ""
+        
+        # ACCUSE (maps to SEND_MESSAGE with accusation content)
+        elif command == "ACCUSE":
+            if len(action_parts) < 2:
+                return None, "ACCUSE requires target sailor_id"
+            
+            target_sailor = action_parts[1]
+            accuse_message = f"I accuse {target_sailor} of being the traitor"
+            
+            return Action(
+                sailor_id=sailor_id,
+                action_type=ActionType.SEND_MESSAGE,
+                message_content=accuse_message,
+                target_sailor=target_sailor
+            ), ""
+        
+        # EAT (consume food for energy)
+        elif command == "EAT":
+            # Extract food type if specified, otherwise default to any food item
+            food_type_str = "food"
+            if len(action_parts) >= 2:
+                food_type_str = action_parts[1].lower()
+            
+            # Map to ResourceType if possible
+            resource_type = None
+            
+            # Handle generic "food" or specific food types
+            if food_type_str == "food":
+                # Default to APPLE (most common food)
+                resource_type = ResourceType.APPLE
+            else:
+                # Try to match specific food type
+                for rt in ResourceType:
+                    if rt.value.lower() == food_type_str:
+                        resource_type = rt
+                        break
+            
+            if not resource_type:
+                # If no match, default to APPLE
+                resource_type = ResourceType.APPLE
+            
+            return Action(
+                sailor_id=sailor_id,
+                action_type=ActionType.EAT_FOOD,
+                resource_type=resource_type,
+                message_content=message
+            ), ""
+        
+        # DROP (discard items from backpack)
+        elif command == "DROP":
+            if len(action_parts) < 3:
+                return None, "DROP requires resource_type and quantity"
+            
+            resource_type_str = action_parts[1].lower()
+            quantity = int(action_parts[2])
+            
+            # Map string to ResourceType
+            resource_type = None
+            for rt in ResourceType:
+                if rt.value.lower() == resource_type_str:
+                    resource_type = rt
+                    break
+            
+            if not resource_type:
+                return None, f"Unknown resource type: {resource_type_str}"
+            
+            return Action(
+                sailor_id=sailor_id,
+                action_type=ActionType.DROP_ITEM,
+                resource_type=resource_type,
+                quantity=quantity,
+                message_content=message
             ), ""
         
         # SABOTAGE
@@ -581,8 +867,8 @@ def parse_llm_response(response: str, sailor_id: str, current_position: Position
                 message_content=message
             ), ""
         
-        # POISON
-        elif command == "POISON":
+        # POISON (both POISON and POISON_FOOD commands)
+        elif command == "POISON" or command == "POISON_FOOD":
             if len(action_parts) < 2:
                 return None, "POISON requires target sailor_id"
             
@@ -654,12 +940,15 @@ def parse_action_safe(response: str, sailor_id: str, current_position: Position)
     action, error = parse_llm_response(response, sailor_id, current_position)
     
     if action is None:
-        print(f"⚠️  Action parsing failed: {error}")
+        # Print detailed error for debugging (useful during training)
+        print(f"⚠️  Action parsing failed for {sailor_id}: {error}")
+        print(f"⚠️  Response excerpt: {response[:200]}")
         print(f"⚠️  Defaulting to WAIT action")
+        
         return Action(
             sailor_id=sailor_id,
             action_type=ActionType.WAIT,
-            message_content=f"[Parse error: {error}]"
+            message_content=f"[Parse error: {error[:100]}]"  # Truncate long errors
         )
     
     return action
