@@ -52,7 +52,7 @@ class AStarPathfinder:
             ]
             
             for action, next_pos in neighbors:
-                if not self.env.state.worldmap.is_walkable(next_pos):
+                if not self.env.state.world_map.is_walkable(next_pos):
                     continue
                 
                 next_key = (next_pos.x, next_pos.y)
