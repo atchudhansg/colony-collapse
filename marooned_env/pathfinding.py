@@ -69,5 +69,61 @@ class AStarPathfinder:
                 
             return None
         
+def navigate_with_astar(
+    env,
+    sailor_id: str,
+    target_pos: Position,
+    max_steps: int = 50,
+    verbose: bool = False
+) -> Tuple[bool, int, str]:
+   
+    from models import Action
+    
+    sailor = env.state.sailors[sailor_id]
+    
+    # Level mismatch check
+    if sailor.position.level != target_pos.level:
+        return False, 0, "Different levels - use level transitions first"
+    
+    # Find path using A*
+    pathfinder = AStarPathfinder(env)
+    path = pathfinder.find_path(sailor.position, target_pos, max_distance=max_steps)
+    
+    if path is None:
+        return False, 0, f"No path found from {sailor.position.to_tuple()} to {target_pos.to_tuple()}"
+    
+    # Execute path
+    steps = 0
+    for action_type in path:
+        # Check whose turn it is
+        active = env.state.get_active_sailor()
+        if active != sailor_id:
+            # Not our turn - wait
+            action = Action(sailor_id=active, action_type=ActionType.WAIT)
+            env.step({active: action})
+            continue
         
+        # Execute move
+        action = Action(sailor_id=sailor_id, action_type=action_type)
+        obs, _, _, _, info = env.step({sailor_id: action})
+        
+        if info.get(sailor_id, {}).get('success'):
+            steps += 1
+            sailor = env.state.sailors[sailor_id]  # Refresh
+            
+            if verbose and steps % 10 == 0:
+                print(f"Step {steps}: {sailor.position.to_tuple()}")
+            
+            # Check if arrived
+            if sailor.position == target_pos:
+                if verbose:
+                    print(f"✓ Arrived in {steps} steps using A*")
+                return True, steps, "Arrived"
+        else:
+            return False, steps, f"Path blocked at step {steps}"
+        
+        if steps >= max_steps:
+            return False, steps, "Max steps reached"
+    
+    return True, steps, "Arrived"    
             
