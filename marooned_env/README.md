@@ -10,6 +10,7 @@ marooned_env/
 ├── config.py           # Game constants and balancing parameters
 ├── llm_interface.py    # Observation → LLM prompt conversion
 └── view_map.py         # Emoji map visualization
+├── pathfinding.py      # Optimized way to navigate through map
 ```
 
 ---
