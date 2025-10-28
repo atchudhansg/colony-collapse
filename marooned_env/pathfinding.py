@@ -1,0 +1,73 @@
+# A* Pathfinding Utilities
+# Optimal pathfinding for the AI Agents
+
+from typing import List, Tuple, Optional
+import heapq
+from models import Position
+from config import MapLevel, ActionType
+
+class AStarPathfinder:
+    #A* pathfinding algo for single-level navigation, to find optimal path
+    
+    def __init__(self, environment):
+        self.env = environment
+        
+    def find_path(
+        self,
+        start: Position,
+        goal: Position,
+        max_distance: int = 100
+    ) -> Optional[List[ActionType]]:
+        if start.level != goal.level:
+            return None
+        
+        if start == goal:
+            return []
+        
+        frontier = [] #Priority queue: (f-score, counter, pos, path)}
+        heapq.heappush(frontier, (0,0, start, []))
+        
+        visited = set()
+        counter = 1
+        
+        while frontier:
+            f_score, _, current, path = heapq.heappop(frontier)
+            
+            if current == goal:
+                return path
+            
+            pos_key = (current.x, current.y)
+            if pos_key in visited:
+                continue 
+            visited.add(pos_key)
+            
+            if len(path) >= max_distance:
+                continue
+            
+            neighbors = [
+                (ActionType.MOVE_NORTH, Position(current.x, current.y - 1, current.level)),
+                (ActionType.MOVE_SOUTH, Position(current.x, current.y + 1, current.level)),
+                (ActionType.MOVE_EAST, Position(current.x + 1, current.y, current.level)),
+                (ActionType.MOVE_WEST, Position(current.x - 1, current.y, current.level)),
+            ]
+            
+            for action, next_pos in neighbors:
+                if not self.env.state.worldmap.is_walkable(next_pos):
+                    continue
+                
+                next_key = (next_pos.x, next_pos.y)
+                if next_key in visited:
+                    continue
+                
+                g_score = len(path) + 1
+                h_score = abs(next_pos.x - goal.x) + abs(next_pos.y - goal.y)  # Manhattan distance
+                f_score = g_score + h_score
+                
+                new_path = path + [action]
+                heapq.heappush(frontier, (f_score, counter, next_pos, new_path))
+                counter += 1
+                
+            return None
+        
+        
+            
