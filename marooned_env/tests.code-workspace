@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "tests",
+			"path": "../../Downloads/tests"
+		},
+		{
+			"name": "colony-collapse",
+			"path": ".."
+		}
+	],
+	"settings": {}
+}
