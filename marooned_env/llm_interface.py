@@ -16,7 +16,7 @@ from models import Observation, Action, Position
 from config import ActionType, ResourceType, ShipComponent, MapLevel
 
 # vLLM Teacher API Configuration
-VLLM_API_URL = "http://localhost:8000/v1/chat/completions"
+VLLM_API_URL = "http://localhost:8001/v1/chat/completions"
 TEACHER_MODEL_NAME = "unsloth/Meta-Llama-3.1-8B-Instruct"
 
 
