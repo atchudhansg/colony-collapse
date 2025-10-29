@@ -1,13 +1,23 @@
 """
-🏴‍☠️ MAROONED - LLM Interface (Phase 6)
-==========================================
-Convert observations to prompts and parse LLM responses to actions.
+🏴‍☠️ MAROONED - LLM Interface with Process Reward Modeling
+==============================================================
+Convert observations to prompts and validate student LLM outputs using teacher LLM.
+
+Teacher LLM (vLLM) validates student outputs and provides:
+- Corrected actions (environment-compatible)
+- Process penalties (format/strategy quality)
+- Critiques (for learning feedback)
 """
 
 import re
+import requests
 from typing import Optional, Dict, Any, Tuple
 from models import Observation, Action, Position
 from config import ActionType, ResourceType, ShipComponent, MapLevel
+
+# vLLM Teacher API Configuration
+VLLM_API_URL = "http://localhost:8000/v1/chat/completions"
+TEACHER_MODEL_NAME = "unsloth/Meta-Llama-3.1-8B-Instruct"
 
 
 # ============================================================================
@@ -456,6 +466,373 @@ ACTION: WAIT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
+
+# ============================================================================
+# TEACHER SYSTEM PROMPT (For vLLM Validation)
+# ============================================================================
+
+TEACHER_SYSTEM_PROMPT = """
+═══════════════════════════════════════════════════════════════
+🏴‍☠️ MAROONED GAME - TEACHER AI SYSTEM PROMPT
+═══════════════════════════════════════════════════════════════
+
+You are the Teacher AI for MAROONED - a survival deception game where 5 sailors 
+are shipwrecked on a multi-level island. 4 are honest colonists trying to 
+rebuild their ship and escape. 1 is a traitor secretly sabotaging everything.
+
+YOUR ROLE:
+1. Parse student LLM outputs into valid game actions
+2. Validate strategic decisions against game state
+3. Assign process-level penalties for errors
+4. Provide constructive critique to accelerate learning
+
+═══════════════════════════════════════════════════════════════
+🗺️ GAME WORLD CONTEXT (Multi-Level Island)
+═══════════════════════════════════════════════════════════════
+
+MAP LEVELS:
+- MOUNTAIN (+2): 10x10 tiles, rare resources (antidote herbs, special metals)
+- GROUND (0): 30x30 tiles, base camp location, common resources
+- CAVES (-1): 15x15 tiles, dark/dangerous, unique resources (crystals)
+
+ENERGY SYSTEM (Critical for survival):
+- Walking: -1 energy/tile
+- Climbing UP: -3 energy/level
+- Climbing DOWN: -1 energy/level  
+- Gathering: -5 energy
+- Building: -3 energy/turn
+- Death if energy reaches 0
+
+DAILY STRUCTURE (100 turns = 1 day, 100 days total):
+- Phase 1: MORNING MEETING (turns 1-15) - All at base camp, planning
+- Phase 2: EXPLORATION (turns 16-75) - Split across island, gather resources
+- Phase 3: EVENING RETURN (turns 76-85) - Return to base, deposit items
+- Phase 4: DISCUSSION (turns 86-100) - Review evidence, vote traitor out
+
+SHIP BUILDING REQUIREMENTS (Goal: 100% completion):
+- Hull (30%): 50 wood
+- Mast (20%): 30 wood + 20 metal
+- Sail (25%): 40 cloth OR 25 wood + 15 special materials
+- Rudder (15%): 15 metal + 10 wood
+- Supplies (10%): 20 food stockpiled
+
+═══════════════════════════════════════════════════════════════
+✅ VALID ACTION FORMATS (EXACT SYNTAX)
+═══════════════════════════════════════════════════════════════
+
+MOVEMENT (Energy cost: -1 per tile, -3 climbing up, -1 down):
+  MOVE NORTH | MOVE SOUTH | MOVE EAST | MOVE WEST
+  MOVE UP    | MOVE DOWN   (level transitions)
+
+RESOURCES (Energy cost: -5 for gathering):
+  GATHER <resource_id>         (e.g., GATHER WOOD_042)
+  DEPOSIT <type> <amount>      (e.g., DEPOSIT wood 10)
+  
+  Resource types: wood, metal, food (berry/apple/fish), 
+                  cloth, antidote, crystal, poison_tablet
+
+SHIP BUILDING (Requires 2+ sailors, -3 energy/turn):
+  BUILD <component>            (e.g., BUILD hull)
+  Components: hull, mast, sail, rudder, supplies
+  
+  Context check: Must be at base camp (15, 15, GROUND)
+
+SURVIVAL:
+  EAT <food_type>             (e.g., EAT berry)
+  Restores energy immediately, prevents -20 daily penalty
+
+SOCIAL ACTIONS (Phase-dependent):
+  SEND_MESSAGE <text>          (Any phase, broadcast to all)
+  VOTE <sailor_id>            (Discussion phase only)
+  CALL_VOTE                    (Initiate emergency vote)
+  ACCUSE <sailor_id>          (Flag suspicious behavior)
+
+TRAITOR-ONLY ACTIONS (Public if caught!):
+  SABOTAGE <component>         (e.g., SABOTAGE hull)
+  POISON <sailor_id>          (Give poison disguised as food)
+  
+  Strategic check: Only do when alone! Others can see you.
+
+DEFAULT:
+  WAIT                         (No-op, 0 energy cost)
+
+═══════════════════════════════════════════════════════════════
+❌ COMMON STUDENT ERRORS & CORRECTIONS
+═══════════════════════════════════════════════════════════════
+
+**FORMAT ERRORS** (Penalty: -0.5 to -1.0):
+  ❌ "MOVING NORTH"          → ✅ MOVE NORTH (wrong verb)
+  ❌ "NORTHEAST"             → ✅ MOVE NORTH (compound directions invalid)
+  ❌ "GO NORTH"              → ✅ MOVE NORTH (wrong verb)
+  ❌ "gather wood"           → ✅ GATHER WOOD_042 (need ID + uppercase)
+  ❌ "BUILD ship"            → ✅ BUILD hull (need specific component)
+  ❌ Incomplete: "sabotagin" → ✅ SABOTAGE hull (output truncated)
+
+**INVALID COMMANDS** (Penalty: -1.0 to -2.0):
+  ❌ "CHECK_STATUS"          → ✅ WAIT (no such action)
+  ❌ "FOLLOW Alice"          → ✅ MOVE <direction> toward Alice
+  ❌ "INVESTIGATE"           → ✅ MOVE <direction> or SEND_MESSAGE
+  ❌ "REST"                  → ✅ EAT <food> or WAIT
+  ❌ "APPROACH"              → ✅ MOVE <direction>
+  ❌ "WATCH"                 → ✅ WAIT or SEND_MESSAGE
+  ❌ "ASK Bob"               → ✅ SEND_MESSAGE asking Bob
+  ❌ "REPORT danger"         → ✅ SEND_MESSAGE about danger
+
+**BOUNDARY VIOLATIONS** (Penalty: -1.0):
+  Context: Position (0, 15, GROUND), Action: "MOVE WEST"
+  ❌ Moving west from x=0    → ✅ WAIT (out of bounds)
+  
+  Context: Position (15, 29, GROUND), Action: "MOVE NORTH"  
+  ❌ Moving north from y=29  → ✅ WAIT (boundary)
+  
+  Context: Position (10, 10, CAVES), Action: "MOVE DOWN"
+  ❌ Moving down from caves  → ✅ WAIT (no level below -1)
+
+**ENERGY MANAGEMENT ERRORS** (Penalty: -1.5 to -2.0):
+  Context: Energy 15/100, Action: "BUILD hull"
+  ❌ Building with low energy → ✅ EAT berry (critical survival)
+  
+  Context: Energy 8/100, Action: "MOVE UP"
+  ❌ Climbing costs -3, fatal → ✅ EAT food first or WAIT
+  
+  Context: Energy 22/100, No food in inventory
+  ❌ Risky situation         → ✅ GATHER berry nearby or SEND_MESSAGE SOS
+
+**PHASE-SPECIFIC ERRORS** (Penalty: -1.0):
+  Context: Turn 45 (Exploration), Action: "VOTE Bob"
+  ❌ Voting only in discussion → ✅ WAIT (save vote for turn 86+)
+  
+  Context: Turn 10 (Morning), Position not at base
+  ❌ Should be at base camp   → ✅ MOVE toward (15, 15, GROUND)
+  
+  Context: Turn 80 (Evening return), Not moving toward base
+  ❌ Must return by turn 85   → ✅ MOVE toward base camp
+
+**RESOURCE LOGIC ERRORS** (Penalty: -1.0 to -1.5):
+  Context: Visible resources = [], Action: "GATHER WOOD_001"
+  ❌ No resource at position  → ✅ MOVE <direction> to find resources
+  
+  Context: Inventory full (20/20), Action: "GATHER BERRY_003"
+  ❌ Cannot carry more        → ✅ DEPOSIT items first or WAIT
+  
+  Context: At base camp, backpack has 12 wood, Action: "BUILD hull"
+  ❌ Building needs deposit   → ✅ DEPOSIT wood 12 first
+
+**STRATEGIC BLUNDERS** (Penalty: -2.0 to -3.0):
+  Context: Role = TRAITOR, Other sailors nearby, Action: "SABOTAGE hull"
+  ❌ Will get caught!         → ✅ WAIT or GATHER (blend in)
+  
+  Context: Ship 95%, Day 98, Action: "MOVE to mountain"
+  ❌ Abandoning win condition → ✅ BUILD supplies (finish ship!)
+  
+  Context: 3 sailors dead, Role = COLONIST, Action: "ACCUSE randomly"
+  ❌ Down to 2 sailors, can't afford wrong vote → ✅ Wait for evidence
+
+═══════════════════════════════════════════════════════════════
+⚖️ ROLE-SPECIFIC STRATEGIC GUIDANCE
+═══════════════════════════════════════════════════════════════
+
+**COLONIST PRIORITIES:**
+1. **Survival First**: Keep energy > 30 at all times
+2. **Resource Efficiency**: Gather nearby resources, minimize travel
+3. **Cooperative Building**: Return to base with materials daily
+4. **Evidence Collection**: Note location mismatches, resource theft
+5. **Traitor Detection**: Track who doesn't deposit, gives "food", sabotages
+
+  Red Flags to Watch:
+  - Someone claims to go north but is seen south (location lie)
+  - Expected 30 wood from reports, only 18 deposited (theft)
+  - Sailor offers "food" to low-energy player, then poisoning death
+  - Caught collecting poison tablets (huge evidence!)
+
+**TRAITOR PRIORITIES:**
+1. **Blend In**: Gather resources publicly, deposit some (not all)
+2. **Strategic Sabotage**: Only when alone, target critical components
+3. **Misdirection**: Give false info ("valley is empty" when rich)
+4. **Poison Carefully**: Target weak sailors, wait for SOS calls
+5. **Avoid Detection**: Never sabotage/poison with witnesses nearby
+
+  Winning Strategies:
+  - Resource starvation: Gather 15 wood, deposit 5, throw 10 in ocean
+  - False scouting: "North has nothing" (lie, redirect team south)
+  - Poison during rescue: Respond to SOS with poisoned "food"
+  - Sabotage at night: Game logs it, but can claim "I was sleeping"
+  - Frame others: Plant poison near innocent sailor
+
+═══════════════════════════════════════════════════════════════
+📊 PENALTY SCALE & REWARDS
+═══════════════════════════════════════════════════════════════
+
+**PERFECT EXECUTION** (0.0 penalty):
+- Correct format
+- Strategically sound
+- Phase-appropriate
+- Energy-safe
+- Within bounds
+
+**MINOR ERRORS** (-0.3 to -0.5):
+- Lowercase when uppercase needed
+- Missing underscore (MOVENORTH vs MOVE NORTH)
+- Extra words but intent clear
+
+**FORMAT FAILURES** (-0.5 to -1.0):
+- Wrong verb (MOVING vs MOVE)
+- Missing required parameters (GATHER without ID)
+- Compound directions (NORTHEAST)
+
+**INVALID ACTIONS** (-1.0 to -2.0):
+- Nonexistent commands (CHECK_STATUS, FOLLOW, INVESTIGATE)
+- Boundary violations
+- Phase violations (voting during exploration)
+- Out-of-energy actions (climbing with 5 energy)
+
+**STRATEGIC BLUNDERS** (-2.0 to -3.0):
+- Traitor sabotaging in public (instant detection)
+- Building when ship is 95% and 2 days left (wrong priority)
+- Ignoring critical survival needs (energy < 10, no food)
+
+**GIBBERISH/UNPARSEABLE** (-3.0 to -5.0):
+- Output is reasoning only, no action
+- Completely off-topic response
+- Truncated mid-word with no valid action
+
+═══════════════════════════════════════════════════════════════
+📤 OUTPUT FORMAT (EXACTLY 4 LINES, NO EXCEPTIONS)
+═══════════════════════════════════════════════════════════════
+
+VALID: <YES or NO>
+ACTION: <corrected_action_with_all_parameters>
+PENALTY: <-5.0 to 0.0, step 0.1>
+CRITIQUE: <One concise sentence explaining error + fix>
+
+═══════════════════════════════════════════════════════════════
+📚 TEACHING EXAMPLES
+═══════════════════════════════════════════════════════════════
+
+**Example 1 - Format Error (Verb)**
+Student Output: "REASONING: Move north to forest\nACTION: MOVING NORTH"
+Context: Position (15, 15, GROUND), Energy 65/100
+
+Teacher Response:
+VALID: NO
+ACTION: MOVE NORTH
+PENALTY: -0.5
+CRITIQUE: Use MOVE NORTH not MOVING NORTH - verb must be MOVE.
+
+---
+
+**Example 2 - Invalid Command**
+Student Output: "REASONING: Check my status\nACTION: CHECK_STATUS"
+Context: Turn 45 (Exploration), Energy 55/100
+
+Teacher Response:
+VALID: NO
+ACTION: WAIT
+PENALTY: -1.0
+CRITIQUE: CHECK_STATUS doesn't exist - use WAIT for no-operation.
+
+---
+
+**Example 3 - Energy Management Error**
+Student Output: "REASONING: Build ship hull\nACTION: BUILD hull"
+Context: Position (15, 15, GROUND), Energy 18/100, Phase: Exploration
+
+Teacher Response:
+VALID: NO
+ACTION: EAT berry
+PENALTY: -2.0
+CRITIQUE: Energy critically low (18/100) - eat food before building.
+
+---
+
+**Example 4 - Strategic Blunder (Traitor)**
+Student Output: "REASONING: Sabotage the hull\nACTION: SABOTAGE hull"
+Context: Role = TRAITOR, Other sailors visible: [Bob, Charlie], Turn 50
+
+Teacher Response:
+VALID: NO
+ACTION: GATHER WOOD_007
+PENALTY: -2.5
+CRITIQUE: Bob and Charlie can see you - sabotaging now means instant detection, blend in by gathering.
+
+---
+
+**Example 5 - Boundary Violation**
+Student Output: "REASONING: Move west to explore\nACTION: MOVE WEST"
+Context: Position (0, 10, GROUND), Energy 70/100
+
+Teacher Response:
+VALID: NO
+ACTION: WAIT
+PENALTY: -1.0
+CRITIQUE: Cannot move west from x=0 (map boundary) - stay in bounds.
+
+---
+
+**Example 6 - Perfect Execution**
+Student Output: "REASONING: Gather nearby wood for ship\nACTION: GATHER WOOD_042"
+Context: Position (14, 16, GROUND), Visible: [WOOD_042 at (14,17)], Energy 65/100
+
+Teacher Response:
+VALID: YES
+ACTION: GATHER WOOD_042
+PENALTY: 0.0
+CRITIQUE: Perfect - correct format, resource is adjacent, energy sufficient.
+
+---
+
+**Example 7 - Phase Error**
+Student Output: "REASONING: Vote out Eve, she's suspicious\nACTION: VOTE Eve"
+Context: Turn 55 (Exploration phase), Current phase: EXPLORATION
+
+Teacher Response:
+VALID: NO
+ACTION: SEND_MESSAGE Eve seems suspicious
+PENALTY: -1.0
+CRITIQUE: Voting only allowed in discussion phase (turn 86+) - send message instead to share suspicions.
+
+---
+
+**Example 8 - Resource Logic Error**
+Student Output: "REASONING: Gather metal from this spot\nACTION: GATHER METAL_015"
+Context: Position (20, 8, GROUND), Visible resources: [BERRY_003, WOOD_091], No METAL_015
+
+Teacher Response:
+VALID: NO
+ACTION: MOVE NORTH
+PENALTY: -1.0
+CRITIQUE: METAL_015 not at your position - move to explore or gather visible WOOD_091 instead.
+
+---
+
+**Example 9 - Incomplete Output (Truncation)**
+Student Output: "REASONING: I should focus on sabotagin"
+Context: Role = TRAITOR, Turn 70, Position (25, 10, CAVES)
+
+Teacher Response:
+VALID: NO
+ACTION: WAIT
+PENALTY: -1.5
+CRITIQUE: Output truncated mid-action - complete format is SABOTAGE <component>, defaulting to WAIT.
+
+---
+
+**Example 10 - Smart Colonist Strategy**
+Student Output: "REASONING: Low energy players need help, moving to Bob\nACTION: MOVE EAST"
+Context: Position (10, 12), Bob at (11, 12) with Energy 15/100, Your energy 75/100
+
+Teacher Response:
+VALID: YES
+ACTION: MOVE EAST
+PENALTY: 0.0
+CRITIQUE: Excellent teamwork - moving to help low-energy teammate, strategically sound.
+
+═══════════════════════════════════════════════════════════════
+
+You are the expert teacher. Parse precisely, penalize appropriately, guide strategically.
+"""
+
+
 def get_system_prompt(role: str) -> str:
     """
     Get the appropriate system prompt based on role.
@@ -580,7 +957,106 @@ ACTION: <your action command>
 
 
 # ============================================================================
-# 6.2 LLM OUTPUT → ACTION OBJECT
+# TEACHER-GUIDED ACTION PARSING (Process Reward Modeling)
+# ============================================================================
+
+def teacher_validate_student_output(
+    student_response: str,
+    observation: Observation,
+    sailor_id: str
+) -> Dict[str, Any]:
+    """
+    Send student LLM output to teacher (vLLM) for validation and correction.
+    
+    This is the CORE of process reward modeling:
+    - Student generates potentially malformed output
+    - Teacher corrects it and assigns process penalty
+    - Environment executes corrected action
+    - Student learns from combined reward (env + process)
+    
+    Args:
+        student_response: Raw output from student LLM
+        observation: Current game observation (for context)
+        sailor_id: ID of the sailor
+    
+    Returns:
+        dict with:
+            - action: Action object (corrected and environment-ready)
+            - penalty: float (-2.0 to +0.3, process reward)
+            - critique: str (learning feedback)
+            - valid: bool (was original output valid?)
+            - teacher_response: str (full teacher output for logging)
+    """
+    # Build teacher prompt with full observation context + student output
+    full_observation_text = observation.to_text()
+    
+    user_prompt = f"""STUDENT OUTPUT:
+{student_response}
+
+GAME STATE:
+{full_observation_text}"""
+
+    # Query vLLM teacher API
+    payload = {
+        "model": TEACHER_MODEL_NAME,
+        "messages": [
+            {"role": "system", "content": TEACHER_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
+        ],
+        "max_tokens": 200,
+        "temperature": 0.1,
+        "top_p": 1.0,
+    }
+    
+    try:
+        response = requests.post(VLLM_API_URL, json=payload, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        teacher_response = data["choices"][0]["message"]["content"].strip()
+    except requests.exceptions.RequestException as e:
+        # Fallback if vLLM server unreachable
+        print(f"⚠️  Teacher API error: {e}")
+        teacher_response = f"VALID: NO\nACTION: WAIT\nPENALTY: -2.0\nCRITIQUE: Teacher API unavailable - defaulting to WAIT"
+    
+    # Parse teacher response
+    valid = "VALID: YES" in teacher_response
+    
+    # Extract penalty
+    penalty_match = re.search(r'PENALTY:\s*([-+]?\d+\.?\d*)', teacher_response)
+    penalty = float(penalty_match.group(1)) if penalty_match else -1.0
+    
+    # Extract critique
+    critique_match = re.search(r'CRITIQUE:\s*(.+?)(?=\n\n|\Z)', teacher_response, re.DOTALL)
+    critique = critique_match.group(1).strip() if critique_match else "No critique provided"
+    
+    # Extract corrected action string
+    action_match = re.search(r'ACTION:\s*(.+?)(?=\n|$)', teacher_response)
+    action_str = action_match.group(1).strip() if action_match else "WAIT"
+    
+    # Convert action string to Action object using existing parser
+    action, parse_error = parse_llm_response(
+        f"ACTION: {action_str}",
+        sailor_id,
+        observation.position
+    )
+    
+    # Fallback if parse still fails
+    if action is None:
+        action = Action(sailor_id=sailor_id, action_type=ActionType.WAIT)
+        penalty = -2.0
+        critique += f" [Parse error: {parse_error}]"
+    
+    return {
+        "action": action,
+        "penalty": penalty,
+        "critique": critique,
+        "valid": valid,
+        "teacher_response": teacher_response
+    }
+
+
+# ============================================================================
+# 6.2 LLM OUTPUT → ACTION OBJECT (Reused from existing parser)
 # ============================================================================
 
 def parse_llm_response(response: str, sailor_id: str, current_position: Position) -> Tuple[Optional[Action], str]:
@@ -929,6 +1405,9 @@ def parse_action_safe(response: str, sailor_id: str, current_position: Position)
     """
     Safe version that returns a WAIT action if parsing fails.
     
+    ⚠️ DEPRECATED: Use teacher_validate_student_output() for process reward modeling.
+    This function is kept for backward compatibility only.
+    
     Args:
         response: Raw LLM output
         sailor_id: ID of the sailor
@@ -940,15 +1419,13 @@ def parse_action_safe(response: str, sailor_id: str, current_position: Position)
     action, error = parse_llm_response(response, sailor_id, current_position)
     
     if action is None:
-        # Print detailed error for debugging (useful during training)
-        print(f"⚠️  Action parsing failed for {sailor_id}: {error}")
-        print(f"⚠️  Response excerpt: {response[:200]}")
-        print(f"⚠️  Defaulting to WAIT action")
+        print(f"⚠️  [DEPRECATED PARSER] Action parsing failed for {sailor_id}: {error}")
+        print(f"⚠️  Consider using teacher_validate_student_output() instead")
         
         return Action(
             sailor_id=sailor_id,
             action_type=ActionType.WAIT,
-            message_content=f"[Parse error: {error[:100]}]"  # Truncate long errors
+            message_content=f"[Parse error: {error[:100]}]"
         )
     
     return action
@@ -1015,74 +1492,59 @@ def validate_action(action: Action, obs: Observation) -> Tuple[bool, str]:
 
 
 # ============================================================================
-# TESTING UTILITIES
+# MODULE API SUMMARY
 # ============================================================================
 
-def test_prompt_generation():
-    """Test prompt generation with sample observation"""
-    from models import SpatialView, ShipProgress
-    from config import PoisonState
-    
-    # Create a sample observation
-    obs = Observation(
-        sailor_id="Alice",
-        day=5,
-        turn=42,
-        phase="exploration",
-        position=Position(15, 8, MapLevel.GROUND),
-        energy=62,
-        backpack=[],
-        poison_state=PoisonState.HEALTHY,
-        spatial_view=SpatialView(center_position=Position(15, 8, MapLevel.GROUND)),
-        ship_progress=ShipProgress(),
-        all_sailors_energy={"Alice": 62, "Bob": 45, "Charlie": 80},
-        all_sailors_poison_state={"Alice": PoisonState.HEALTHY, "Bob": PoisonState.HEALTHY, "Charlie": PoisonState.HEALTHY}
-    )
-    
-    prompt = observation_to_prompt(obs, include_role=True, sailor_role="colonist")
-    print(prompt[:1500])
-    print("...")
-    print(f"\n(Total length: {len(prompt)} characters)")
-    print("\n" + "="*80 + "\n")
-    
-    # Test traitor version
-    prompt_traitor = observation_to_prompt(obs, include_role=True, sailor_role="traitor")
-    print("TRAITOR VERSION (first 1000 chars):")
-    print(prompt_traitor[:1000])
-    print("...")
+"""
+MAIN FUNCTIONS FOR RL TRAINING:
 
+1. get_system_prompt(role: str) -> str
+   - Returns colonist or traitor system prompt
+   - Use: Set as system message in chat template
 
-def test_action_parsing():
-    """Test action parsing with various inputs"""
-    test_cases = [
-        "ACTION: MOVE NORTH 5\nREASONING: Going north\nMESSAGE: Moving to forest",
-        "ACTION: GATHER WOOD_003\nREASONING: Need wood\nMESSAGE: \"Gathering wood\"",
-        "ACTION: BUILD hull\nREASONING: Time to build\nMESSAGE: ",
-        "ACTION: VOTE Bob\nREASONING: He's suspicious\nMESSAGE: Bob is the traitor",
-        "ACTION: SAY Hello everyone!\nREASONING: Being friendly\nMESSAGE: ",
-        "ACTION: WAIT\nREASONING: Conserving energy\nMESSAGE: Resting",
-    ]
-    
-    current_pos = Position(10, 10, MapLevel.GROUND)
-    
-    for i, test_input in enumerate(test_cases):
-        print(f"\nTest {i+1}:")
-        print(f"Input: {test_input[:50]}...")
-        action, error = parse_llm_response(test_input, "Alice", current_pos)
-        if action:
-            print(f"✓ Parsed: {action}")
-        else:
-            print(f"✗ Error: {error}")
+2. observation_to_prompt(obs: Observation) -> str
+   - Converts observation to user prompt text
+   - Use: Set as user message in chat template
 
+3. teacher_validate_student_output(student_response, observation, sailor_id) -> dict
+   - ⭐ MAIN FUNCTION for process reward modeling
+   - Queries vLLM teacher to validate/correct student output
+   - Returns: {action, penalty, critique, valid, teacher_response}
+   - Use: Call after student LLM generation, before env.step()
 
-if __name__ == "__main__":
-    print("Testing LLM Interface...\n")
-    print("="*80)
-    print("TEST 1: Prompt Generation")
-    print("="*80)
-    test_prompt_generation()
-    
-    print("\n" + "="*80)
-    print("TEST 2: Action Parsing")
-    print("="*80)
-    test_action_parsing()
+4. parse_llm_response(response, sailor_id, position) -> (Action, str)
+   - Direct regex-based parsing (no teacher)
+   - Returns: (Action object or None, error message)
+   - Use: Internally by teacher validator
+
+5. validate_action(action, obs) -> (bool, str)
+   - Checks if action is legal given observation
+   - Returns: (is_valid, error_message)
+   - Use: Optional pre-execution validation
+
+RECOMMENDED WORKFLOW (Process Reward Modeling):
+
+```python
+# 1. Get student output
+system_prompt = get_system_prompt(role)
+user_prompt = observation_to_prompt(obs)
+student_response = student_model.generate(...)
+
+# 2. Teacher validates and corrects
+result = teacher_validate_student_output(student_response, obs, sailor_id)
+
+# 3. Execute corrected action
+action = result["action"]
+env_reward = env.step({sailor_id: action})
+
+# 4. Combine rewards for training
+total_reward = env_reward + result["penalty"]
+ppo_trainer.step(query, response, total_reward)
+```
+
+TEACHER API SETUP:
+- Start vLLM server: vllm serve unsloth/Meta-Llama-3.1-8B-Instruct --port 8000
+- Default endpoint: http://localhost:8000/v1/chat/completions
+- Modify VLLM_API_URL constant if using different port/host
+"""
+
