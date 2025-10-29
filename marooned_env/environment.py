@@ -40,6 +40,8 @@ from config import (
     REWARD_SHIP_MILESTONE_75,
     REWARD_EFFICIENT_ENERGY_USE,
     REWARD_ENERGY_CRITICAL,
+    REWARD_STRATEGIC_SABOTAGE,
+    REWARD_SUCCESSFUL_DEFLECTION
 )
 
 from models import (
@@ -1921,3 +1923,54 @@ if __name__ == "__main__":
     print(f"Rewards: {rewards}")
     
     print("\n🏴‍☠️ Environment test complete!")
+
+def calculate_shaped_reward(self, sailor_id: str, base_reward:float, info: dict) -> float:
+    shaped_reward = base_reward
+    sailor = self.state.sailors[sailor_id]
+    is_traitor = self.state.is_traitor(sailor_id)
+    
+    time_factor = 1.0 + (self.state.current_day/100) * 0.5
+    
+    if is_traitor:
+        shaped_reward += self._traitor_strategic_bonus(sailor_id, info)
+        shaped_reward += self._deception_quality_bonus(sailor_id, info)
+        
+    else:
+        shaped_reward += self._colonist_cooperation_bonus(sailor_id, info)
+        shaped_reward += self._detection_skill_bonus(sailor_id, info)
+    
+    shaped_reward += self._communication_quality(sailor_id, info)
+    shaped_reward += self._evidence_handling(sailor_id, info)
+    
+    #=== Efficiency_bonuses 
+    shaped_reward += self._resource_efficiency(sailor_id, info)
+    shaped_reward += self._energy_management_bonus(sailor_id)
+    
+    if shaped_reward > 0:
+        shaped_reward *= time_factor
+    
+    return shaped_reward
+
+def _traitor_strategic_bonus(self, sailor_id:str, info: dict) -> float:
+    #### Reward strategic sabotage actions
+    bonus = 0.0
+    
+    if info.get('sabotaged'):
+        progress_factor = self.state.ship_progress.total_percentage / 100 
+        bonus += REWARD_STRATEGIC_SABOTAGE * progress_factor
+
+    suspicion = self._get_suspicion_score(sailor_id)
+    if suspicion < 30:
+        bonus += REWARD_SUCCESSFUL_DEFLECTION * 0.1
+        
+    if info.get('voted_out'):
+        bonus -= 15.0           
+
+    return bonus
+
+def _colonist_cooperation_bonus(self, sailor_id:str, info: dict) -> float: 
+    ### Reward teamwork and coordination
+    bonus = 0.0
+    
+           
+         
