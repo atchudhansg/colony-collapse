@@ -652,6 +652,23 @@ REWARD_BACKPACK_MANAGEMENT = 0.08
 REWARD_OPTIONAL_PATH = 0.06
 PENALTY_REDUNDANT_ACTIONS = -0.05
 
+# Use smaller networks
+POLICY_HIDDEN_DIMS = [128, 128]  # Instead of [256, 256]
+VALUE_HIDDEN_DIMS = [128, 64]
+
+# Reduce batch size
+PPO_BATCH_SIZE = 256  # Instead of 2048
+PPO_MINIBATCH_SIZE = 64
+
+# Shorter rollouts
+ROLLOUT_LENGTH = 512  # Instead of 2048
+NUM_ENVS = 4  # Parallel environments
+
+# Mixed precision training
+USE_FP16 = True
+
+
+
 #aDVANTAGE
 def validate_config():
     """Sanity checks for configuration consistency"""

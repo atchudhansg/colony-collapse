@@ -41,7 +41,9 @@ from config import (
     REWARD_EFFICIENT_ENERGY_USE,
     REWARD_ENERGY_CRITICAL,
     REWARD_STRATEGIC_SABOTAGE,
-    REWARD_SUCCESSFUL_DEFLECTION
+    REWARD_SUCCESSFUL_DEFLECTION,
+    REWARD_TEAM_COORDINATION
+    
 )
 
 from models import (
@@ -1969,8 +1971,15 @@ def _traitor_strategic_bonus(self, sailor_id:str, info: dict) -> float:
     return bonus
 
 def _colonist_cooperation_bonus(self, sailor_id:str, info: dict) -> float: 
-    ### Reward teamwork and coordination
     bonus = 0.0
+    
+    if info.get('built_ship'):
+        nearby_count = self._count_nearby_colonists(sailor_id)
+        bonus += REWARD_TEAM_COORDINATION * nearby_count
+    if info.get('deposited_resource'):
+        bonus += REWARD_TEAM_COORDINATION
+        
+    return bonus        
     
            
          
