@@ -742,6 +742,12 @@ colony-collapse/
 4. **API-First Design**: RESTful endpoints allowing agent-environment interaction via HTTP
 
 ---
+**Video Demonstration**:
+
+
+
+https://github.com/user-attachments/assets/6e87f02c-df34-404b-8bed-a1deaadeff75
+
 
 ## 💡 Why This Matters
 
