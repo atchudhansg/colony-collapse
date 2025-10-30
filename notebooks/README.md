@@ -157,8 +157,3 @@ curl http://localhost:8000/v1/models
 ```
 
 3. **Run training**: Open `Train_Marooned_RL_Clean.ipynb` and execute all cells
-
----
-
-> **Incremental development philosophy**: Each phase builds on previous phases without breaking earlier functionality. Test notebooks validate subsystems independently before integration.
-
