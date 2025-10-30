@@ -3,30 +3,25 @@ MAROONED Flask API
 RESTful endpoints for training data access
 """
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit, join_room, leave_room
 from datetime import datetime
 from typing import Dict, Any
-import json
 import os
 
 from database import TrainingDatabase, FileStorage
 from logger import MaroonedTrainingLogger
+from config import config
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'marooned-secret-key-2025'
-CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+app.config.from_object(config)
+CORS(app, origins=config.CORS_ORIGINS)
 
 # Initialize database and logger
-db = TrainingDatabase(db_path='data/episodes.db')
-file_storage = FileStorage(episodes_dir='data/episodes')
-logger = MaroonedTrainingLogger(db_path='data/episodes.db', use_file_storage=True)
-
-# Active connections for WebSocket
-active_connections = {}
+db = TrainingDatabase(db_path=config.DATABASE_PATH)
+file_storage = FileStorage(episodes_dir=config.EPISODES_DIR)
+logger = MaroonedTrainingLogger(db_path=config.DATABASE_PATH, use_file_storage=config.ENABLE_FILE_STORAGE)
 
 # ===================================================================
 # HEALTH & INFO ENDPOINTS
@@ -116,7 +111,7 @@ def get_episode_map(episode_id: int):
 
 @app.route('/api/episodes/<int:episode_id>/export', methods=['GET'])
 def export_episode(episode_id: int):
-    """Export episode as JSON file"""
+    """Export episode as JSON"""
     episode = db.get_episode(episode_id)
     
     if not episode:
@@ -134,7 +129,7 @@ def export_episode(episode_id: int):
 @app.route('/api/training/episode/start', methods=['POST'])
 def start_training_episode():
     """Start new training episode"""
-    data = request.json
+    data = request.json or {}
     
     episode_num = data.get('episode_num', 1)
     traitor = data.get('traitor', 'Unknown')
@@ -151,7 +146,7 @@ def start_training_episode():
 @app.route('/api/training/turn', methods=['POST'])
 def log_training_turn():
     """Log training turn"""
-    data = request.json
+    data = request.json or {}
     
     logger.log_turn(
         turn=data.get('turn', 0),
@@ -175,7 +170,7 @@ def log_training_turn():
 @app.route('/api/training/voting', methods=['POST'])
 def log_voting_phase():
     """Log voting phase"""
-    data = request.json
+    data = request.json or {}
     
     logger.log_voting_phase(
         day=data.get('day', 1),
@@ -191,7 +186,7 @@ def log_voting_phase():
 @app.route('/api/training/map', methods=['POST'])
 def save_map_state():
     """Save map state"""
-    data = request.json
+    data = request.json or {}
     
     logger.save_map_state(
         level=data.get('level', 'ground'),
@@ -203,7 +198,7 @@ def save_map_state():
 @app.route('/api/training/episode/end', methods=['POST'])
 def end_training_episode():
     """End training episode"""
-    data = request.json
+    data = request.json or {}
     
     logger.end_episode(
         final_result=data.get('final_result', 'unknown'),
@@ -270,75 +265,9 @@ def get_training_stats():
     }), 200
 
 # ===================================================================
-# WEBSOCKET EVENTS (Live Training Stream)
-# ===================================================================
-
-@socketio.on('connect')
-def handle_connect():
-    """Handle WebSocket connection"""
-    sid = request.sid
-    active_connections[sid] = {
-        'connected_at': datetime.now().isoformat(),
-        'subscribed_to': []
-    }
-    emit('connection_response', {
-        'status': 'connected',
-        'sid': sid,
-        'message': 'Connected to MAROONED training API'
-    })
-    print(f"[WS] Client {sid} connected")
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    """Handle WebSocket disconnection"""
-    sid = request.sid
-    if sid in active_connections:
-        del active_connections[sid]
-    print(f"[WS] Client {sid} disconnected")
-
-@socketio.on('subscribe_episode')
-def handle_subscribe(data):
-    """Subscribe to episode updates"""
-    episode_id = data.get('episode_id')
-    room = f'episode_{episode_id}'
-    join_room(room)
-    
-    sid = request.sid
-    if sid in active_connections:
-        active_connections[sid]['subscribed_to'].append(episode_id)
-    
-    emit('subscribed', {
-        'episode_id': episode_id,
-        'message': f'Subscribed to episode {episode_id}'
-    })
-    print(f"[WS] Client {sid} subscribed to episode {episode_id}")
-
-@socketio.on('unsubscribe_episode')
-def handle_unsubscribe(data):
-    """Unsubscribe from episode updates"""
-    episode_id = data.get('episode_id')
-    room = f'episode_{episode_id}'
-    leave_room(room)
-    
-    emit('unsubscribed', {
-        'episode_id': episode_id,
-        'message': f'Unsubscribed from episode {episode_id}'
-    })
-    print(f"[WS] Client unsubscribed from episode {episode_id}")
-
-def broadcast_turn_update(episode_id: int, turn_data: Dict[str, Any]):
-    """Broadcast turn update to all subscribers"""
-    room = f'episode_{episode_id}'
-    socketio.emit('turn_update', turn_data, room=room)
-
-def broadcast_episode_end(episode_id: int, result_data: Dict[str, Any]):
-    """Broadcast episode end to all subscribers"""
-    room = f'episode_{episode_id}'
-    socketio.emit('episode_end', result_data, room=room)
- 
-# ===================================================================
 # ERROR HANDLERS
 # ===================================================================
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Endpoint not found'}), 404
@@ -353,4 +282,5 @@ def server_error(error):
 
 if __name__ == '__main__':
     os.makedirs('data', exist_ok=True)
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    os.makedirs('logs', exist_ok=True)
+    app.run(host=config.API_HOST, port=config.API_PORT, debug=config.DEBUG)
