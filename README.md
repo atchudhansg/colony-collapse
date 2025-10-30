@@ -332,6 +332,7 @@ Unlike single-agent environments, MAROONED manages **5 simultaneous agents** wit
 - **Per-agent rewards**: Colonists maximize ship progress, traitor maximizes sabotage
 - **Episode termination**: Ship 100% OR <3 sailors alive OR Day 100 timeout
 
+
 ### What Agents Can Access (Dynamic Environment)
 
 **Vision & Maps**:
