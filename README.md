@@ -1,28 +1,23 @@
-# MAROONED | Survival. Deception. Desperation.
-
-### A Multi-Agent Deception Environment for Reinforcement Learning Research
-
-> "Pirates of the Caribbean meets Alice in Borderland meets Among Us."
->
-> A death-game sandbox where AI agents must survive the island, each other, and the lies.
-
-## <img src="https://github.com/user-attachments/assets/2700a971-e5d6-4036-b03f-2f89c9791609" width="30" alt="OpenEnv"/> <p><i>Part of the Synthetic Data AI Agents Challenge</i></p>
-
-
-We're using the new [OpenEnv](https://github.com/meta-pytorch/OpenEnv) library which has over 2000+ environments for RL!
-
-To run this, press "**Runtime**" and press "**Run all**" on a **free** Tesla T4 Google Colab instance!
-
 <div align="center">
-  <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="115"></a>
-  <a href="https://discord.gg/unsloth"><img src="https://github.com/unslothai/unsloth/raw/main/images/Discord button.png" width="145"></a>
-  <a href="https://docs.unsloth.ai/"><img src="https://github.com/unslothai/unsloth/blob/main/images/documentation%20green%20button.png?raw=true" width="125"></a> Join Discord if you need help + ⭐ <i>Star us on <a href="https://github.com/unslothai/unsloth">Github</a> </i> ⭐
-</div>
 
+<img src="https://github.com/pytorch/pytorch/raw/main/docs/source/_static/img/pytorch-logo-dark.svg" width="120" alt="PyTorch"/>
+
+**Part of the Synthetic Data AI Agents Challenge**
+
+*Virtual Hackathon | October 18-20, 2025*
+
+Sponsored by <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="80" alt="Unsloth"/></a> • **PyTorch** • **AMD**
 
 ---
 
+</div>
 
+# MAROONED | Survival. Deception. Desperation.
+### A Multi-Agent Deception Environment for Reinforcement Learning Research
+> "Pirates of the Caribbean meets Alice in Borderland meets Among Us."
+>
+> A death-game sandbox where AI agents must survive the island, each other, and the lies.
+---
 
 ## Video Demonstration
 
