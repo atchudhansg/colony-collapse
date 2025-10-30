@@ -3,7 +3,7 @@
 ==============================================================
 Convert observations to prompts and validate student LLM outputs using teacher LLM.
 
-Teacher LLM (vLLM) validates student outputs and provides:
+Teacher LLM (Ollama Mixtral) validates student outputs and provides:
 - Corrected actions (environment-compatible)
 - Process penalties (format/strategy quality)
 - Critiques (for learning feedback)
@@ -15,9 +15,9 @@ from typing import Optional, Dict, Any, Tuple
 from models import Observation, Action, Position
 from config import ActionType, ResourceType, ShipComponent, MapLevel
 
-# vLLM Teacher API Configuration
-VLLM_API_URL = "http://localhost:8001/v1/chat/completions"
-TEACHER_MODEL_NAME = "unsloth/Meta-Llama-3.1-8B-Instruct"
+# Ollama Teacher API Configuration
+OLLAMA_API_URL = "http://localhost:11434/api/chat"
+TEACHER_MODEL_NAME = "mixtral:8x22b"
 
 
 # ============================================================================
@@ -966,7 +966,7 @@ def teacher_validate_student_output(
     sailor_id: str
 ) -> Dict[str, Any]:
     """
-    Send student LLM output to teacher (vLLM) for validation and correction.
+    Send student LLM output to teacher (Ollama Mixtral) for validation and correction.
     
     This is the CORE of process reward modeling:
     - Student generates potentially malformed output
@@ -996,25 +996,28 @@ def teacher_validate_student_output(
 GAME STATE:
 {full_observation_text}"""
 
-    # Query vLLM teacher API
+    # Query Ollama teacher API
     payload = {
         "model": TEACHER_MODEL_NAME,
         "messages": [
             {"role": "system", "content": TEACHER_SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt}
         ],
-        "max_tokens": 200,
-        "temperature": 0.1,
-        "top_p": 1.0,
+        "stream": False,
+        "options": {
+            "temperature": 0.1,
+            "top_p": 1.0,
+            "num_predict": 200
+        }
     }
     
     try:
-        response = requests.post(VLLM_API_URL, json=payload, timeout=15)
+        response = requests.post(OLLAMA_API_URL, json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
-        teacher_response = data["choices"][0]["message"]["content"].strip()
+        teacher_response = data["message"]["content"].strip()
     except requests.exceptions.RequestException as e:
-        # Fallback if vLLM server unreachable
+        # Fallback if Ollama server unreachable
         print(f"⚠️  Teacher API error: {e}")
         teacher_response = f"VALID: NO\nACTION: WAIT\nPENALTY: -2.0\nCRITIQUE: Teacher API unavailable - defaulting to WAIT"
     

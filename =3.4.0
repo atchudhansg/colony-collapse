@@ -1,0 +1,424 @@
+Collecting unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo (from unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Cloning https://github.com/unslothai/unsloth-zoo to /tmp/pip-install-9oo49pah/unsloth-zoo_c9daa63a6c584380999b9642d4aead1d
+  Resolved https://github.com/unslothai/unsloth-zoo to commit f690a5aaa3eccab272f6b64c990a93a7a64a0b60
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting unsloth@ git+https://github.com/unslothai/unsloth (from unsloth[base]@ git+https://github.com/unslothai/unsloth)
+  Cloning https://github.com/unslothai/unsloth to /tmp/pip-install-9oo49pah/unsloth_18dbc1c6645f4862a195cd9ccb338358
+  Resolved https://github.com/unslothai/unsloth to commit 5314c214d21a387791decc6b0f7715ebd7c1eeb7
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting git+https://github.com/triton-lang/triton.git@05b2c186c1b6c9a08375389d5efe9cb4c401c075#subdirectory=python/triton_kernels
+  Cloning https://github.com/triton-lang/triton.git (to revision 05b2c186c1b6c9a08375389d5efe9cb4c401c075) to /tmp/pip-req-build-wxn5fhm6
+  Resolved https://github.com/triton-lang/triton.git to commit 05b2c186c1b6c9a08375389d5efe9cb4c401c075
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting triton
+  Downloading triton-3.5.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (1.7 kB)
+Collecting bitsandbytes
+  Downloading bitsandbytes-0.48.2-py3-none-manylinux_2_24_x86_64.whl.metadata (10 kB)
+Collecting transformers==4.56.2
+  Downloading transformers-4.56.2-py3-none-any.whl.metadata (40 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 40.1/40.1 kB 1.5 MB/s eta 0:00:00
+Collecting tokenizers
+  Downloading tokenizers-0.22.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.8 kB)
+Collecting trl==0.22.2
+  Downloading trl-0.22.2-py3-none-any.whl.metadata (11 kB)
+Collecting trackio
+  Downloading trackio-0.7.0-py3-none-any.whl.metadata (8.4 kB)
+Requirement already satisfied: filelock in ./myenv/lib/python3.12/site-packages (from transformers==4.56.2) (3.19.1)
+Collecting huggingface-hub<1.0,>=0.34.0 (from transformers==4.56.2)
+  Downloading huggingface_hub-0.36.0-py3-none-any.whl.metadata (14 kB)
+Requirement already satisfied: numpy>=1.17 in ./myenv/lib/python3.12/site-packages (from transformers==4.56.2) (2.3.3)
+Collecting packaging>=20.0 (from transformers==4.56.2)
+  Using cached packaging-25.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting pyyaml>=5.1 (from transformers==4.56.2)
+  Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+Collecting regex!=2019.12.17 (from transformers==4.56.2)
+  Downloading regex-2025.10.23-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 40.5/40.5 kB 5.5 MB/s eta 0:00:00
+Collecting requests (from transformers==4.56.2)
+  Downloading requests-2.32.5-py3-none-any.whl.metadata (4.9 kB)
+Collecting safetensors>=0.4.3 (from transformers==4.56.2)
+  Downloading safetensors-0.6.2-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+Collecting tqdm>=4.27 (from transformers==4.56.2)
+  Downloading tqdm-4.67.1-py3-none-any.whl.metadata (57 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 57.7/57.7 kB 6.8 MB/s eta 0:00:00
+Collecting accelerate>=1.4.0 (from trl==0.22.2)
+  Downloading accelerate-1.11.0-py3-none-any.whl.metadata (19 kB)
+Collecting datasets>=3.0.0 (from trl==0.22.2)
+  Downloading datasets-4.3.0-py3-none-any.whl.metadata (18 kB)
+Requirement already satisfied: torch<3,>=2.3 in ./myenv/lib/python3.12/site-packages (from bitsandbytes) (2.5.1+rocm6.2)
+Collecting gradio<6.0.0,>=5.48.0 (from gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading gradio-5.49.1-py3-none-any.whl.metadata (16 kB)
+Collecting orjson<4.0.0,>=3.0 (from trackio)
+  Downloading orjson-3.11.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (41 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 41.8/41.8 kB 7.5 MB/s eta 0:00:00
+Collecting pandas<3.0.0 (from trackio)
+  Downloading pandas-2.3.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (91 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 91.2/91.2 kB 9.9 MB/s eta 0:00:00
+Requirement already satisfied: pillow<12.0.0 in ./myenv/lib/python3.12/site-packages (from trackio) (11.3.0)
+Collecting plotly<7.0.0,>=6.0.0 (from trackio)
+  Downloading plotly-6.3.1-py3-none-any.whl.metadata (8.5 kB)
+Collecting pydub<1.0.0 (from trackio)
+  Downloading pydub-0.25.1-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting torchao>=0.13.0 (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading torchao-0.14.1-cp310-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (19 kB)
+Collecting tyro (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading tyro-0.9.35-py3-none-any.whl.metadata (12 kB)
+Collecting sentencepiece>=0.2.0 (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading sentencepiece-0.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (10 kB)
+Collecting psutil (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading psutil-7.1.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (23 kB)
+Collecting wheel>=0.42.0 (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading wheel-0.45.1-py3-none-any.whl.metadata (2.3 kB)
+Collecting peft!=0.11.0,>=0.7.1 (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading peft-0.17.1-py3-none-any.whl.metadata (14 kB)
+Collecting protobuf (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading protobuf-6.33.0-cp39-abi3-manylinux2014_x86_64.whl.metadata (593 bytes)
+Collecting hf_transfer (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading hf_transfer-0.1.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (1.7 kB)
+Collecting cut_cross_entropy (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading cut_cross_entropy-25.1.1-py3-none-any.whl.metadata (9.3 kB)
+Collecting msgspec (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading msgspec-0.19.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.9 kB)
+Requirement already satisfied: typing_extensions in ./myenv/lib/python3.12/site-packages (from unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo) (4.15.0)
+Collecting pytest (from triton_kernels==1.0.0)
+  Downloading pytest-8.4.2-py3-none-any.whl.metadata (7.7 kB)
+Collecting pyarrow>=21.0.0 (from datasets>=3.0.0->trl==0.22.2)
+  Downloading pyarrow-22.0.0-cp312-cp312-manylinux_2_28_x86_64.whl.metadata (3.2 kB)
+Collecting dill<0.4.1,>=0.3.0 (from datasets>=3.0.0->trl==0.22.2)
+  Downloading dill-0.4.0-py3-none-any.whl.metadata (10 kB)
+Collecting httpx<1.0.0 (from datasets>=3.0.0->trl==0.22.2)
+  Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting xxhash (from datasets>=3.0.0->trl==0.22.2)
+  Downloading xxhash-3.6.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+Collecting multiprocess<0.70.17 (from datasets>=3.0.0->trl==0.22.2)
+  Downloading multiprocess-0.70.16-py312-none-any.whl.metadata (7.2 kB)
+Requirement already satisfied: fsspec<=2025.9.0,>=2023.1.0 in ./myenv/lib/python3.12/site-packages (from fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2) (2025.9.0)
+Collecting aiofiles<25.0,>=22.0 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading aiofiles-24.1.0-py3-none-any.whl.metadata (10 kB)
+Collecting anyio<5.0,>=3.0 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading anyio-4.11.0-py3-none-any.whl.metadata (4.1 kB)
+Collecting brotli>=1.1.0 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading Brotli-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.5 kB)
+Collecting fastapi<1.0,>=0.115.2 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading fastapi-0.120.2-py3-none-any.whl.metadata (28 kB)
+Collecting ffmpy (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading ffmpy-0.6.4-py3-none-any.whl.metadata (2.9 kB)
+Collecting gradio-client==1.13.3 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading gradio_client-1.13.3-py3-none-any.whl.metadata (7.1 kB)
+Collecting groovy~=0.1 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading groovy-0.1.2-py3-none-any.whl.metadata (6.1 kB)
+Requirement already satisfied: jinja2<4.0 in ./myenv/lib/python3.12/site-packages (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio) (3.1.6)
+Requirement already satisfied: markupsafe<4.0,>=2.0 in ./myenv/lib/python3.12/site-packages (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio) (2.1.5)
+Collecting pydantic<2.12,>=2.0 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading pydantic-2.11.10-py3-none-any.whl.metadata (68 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 68.6/68.6 kB 13.0 MB/s eta 0:00:00
+Collecting python-multipart>=0.0.18 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading python_multipart-0.0.20-py3-none-any.whl.metadata (1.8 kB)
+Collecting ruff>=0.9.3 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading ruff-0.14.2-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (25 kB)
+Collecting safehttpx<0.2.0,>=0.1.6 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading safehttpx-0.1.7-py3-none-any.whl.metadata (4.2 kB)
+Collecting semantic-version~=2.0 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading semantic_version-2.10.0-py2.py3-none-any.whl.metadata (9.7 kB)
+Collecting starlette<1.0,>=0.40.0 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading starlette-0.49.1-py3-none-any.whl.metadata (6.4 kB)
+Collecting tomlkit<0.14.0,>=0.12.0 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading tomlkit-0.13.3-py3-none-any.whl.metadata (2.8 kB)
+Collecting typer<1.0,>=0.12 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading typer-0.20.0-py3-none-any.whl.metadata (16 kB)
+Collecting uvicorn>=0.14.0 (from gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading uvicorn-0.38.0-py3-none-any.whl.metadata (6.8 kB)
+Collecting websockets<16.0,>=13.0 (from gradio-client==1.13.3->gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading websockets-15.0.1-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.8 kB)
+Collecting authlib (from gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading authlib-1.6.5-py2.py3-none-any.whl.metadata (9.8 kB)
+Collecting itsdangerous (from gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+Collecting hf-xet<2.0.0,>=1.1.3 (from huggingface-hub<1.0,>=0.34.0->transformers==4.56.2)
+  Downloading hf_xet-1.2.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting python-dateutil>=2.8.2 (from pandas<3.0.0->trackio)
+  Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting pytz>=2020.1 (from pandas<3.0.0->trackio)
+  Downloading pytz-2025.2-py2.py3-none-any.whl.metadata (22 kB)
+Collecting tzdata>=2022.7 (from pandas<3.0.0->trackio)
+  Downloading tzdata-2025.2-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting narwhals>=1.15.1 (from plotly<7.0.0,>=6.0.0->trackio)
+  Downloading narwhals-2.10.0-py3-none-any.whl.metadata (11 kB)
+Collecting charset_normalizer<4,>=2 (from requests->transformers==4.56.2)
+  Downloading charset_normalizer-3.4.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (37 kB)
+Collecting idna<4,>=2.5 (from requests->transformers==4.56.2)
+  Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+Collecting urllib3<3,>=1.21.1 (from requests->transformers==4.56.2)
+  Downloading urllib3-2.5.0-py3-none-any.whl.metadata (6.5 kB)
+Collecting certifi>=2017.4.17 (from requests->transformers==4.56.2)
+  Downloading certifi-2025.10.5-py3-none-any.whl.metadata (2.5 kB)
+Requirement already satisfied: networkx in ./myenv/lib/python3.12/site-packages (from torch<3,>=2.3->bitsandbytes) (3.5)
+Requirement already satisfied: pytorch-triton-rocm==3.1.0 in ./myenv/lib/python3.12/site-packages (from torch<3,>=2.3->bitsandbytes) (3.1.0)
+Requirement already satisfied: setuptools in ./myenv/lib/python3.12/site-packages (from torch<3,>=2.3->bitsandbytes) (70.2.0)
+Requirement already satisfied: sympy==1.13.1 in ./myenv/lib/python3.12/site-packages (from torch<3,>=2.3->bitsandbytes) (1.13.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in ./myenv/lib/python3.12/site-packages (from sympy==1.13.1->torch<3,>=2.3->bitsandbytes) (1.3.0)
+Collecting iniconfig>=1 (from pytest->triton_kernels==1.0.0)
+  Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting pluggy<2,>=1.5 (from pytest->triton_kernels==1.0.0)
+  Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+Collecting pygments>=2.7.2 (from pytest->triton_kernels==1.0.0)
+  Downloading pygments-2.19.2-py3-none-any.whl.metadata (2.5 kB)
+Collecting docstring-parser>=0.15 (from tyro->unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading docstring_parser-0.17.0-py3-none-any.whl.metadata (3.5 kB)
+Collecting rich>=11.1.0 (from tyro->unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading rich-14.2.0-py3-none-any.whl.metadata (18 kB)
+Collecting shtab>=1.5.6 (from tyro->unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading shtab-1.7.2-py3-none-any.whl.metadata (7.4 kB)
+Collecting typeguard>=4.0.0 (from tyro->unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading typeguard-4.4.4-py3-none-any.whl.metadata (3.3 kB)
+Requirement already satisfied: torchvision in ./myenv/lib/python3.12/site-packages (from unsloth@ git+https://github.com/unslothai/unsloth->unsloth[base]@ git+https://github.com/unslothai/unsloth) (0.20.1+rocm6.2)
+Collecting sniffio>=1.1 (from anyio<5.0,>=3.0->gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi<1.0,>=0.115.2->gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading annotated_doc-0.0.3-py3-none-any.whl.metadata (6.6 kB)
+Collecting aiohttp!=4.0.0a0,!=4.0.0a1 (from fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading aiohttp-3.13.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.1 kB)
+Collecting httpcore==1.* (from httpx<1.0.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting h11>=0.16 (from httpcore==1.*->httpx<1.0.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting annotated-types>=0.6.0 (from pydantic<2.12,>=2.0->gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.33.2 (from pydantic<2.12,>=2.0->gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading pydantic_core-2.33.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.8 kB)
+Collecting typing-inspection>=0.4.0 (from pydantic<2.12,>=2.0->gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas<3.0.0->trackio)
+  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting markdown-it-py>=2.2.0 (from rich>=11.1.0->tyro->unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading markdown_it_py-4.0.0-py3-none-any.whl.metadata (7.3 kB)
+Collecting click>=8.0.0 (from typer<1.0,>=0.12->gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading click-8.3.0-py3-none-any.whl.metadata (2.6 kB)
+Collecting shellingham>=1.3.0 (from typer<1.0,>=0.12->gradio<6.0.0,>=5.48.0->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting cryptography (from authlib->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading cryptography-46.0.3-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+Collecting diffusers (from unsloth@ git+https://github.com/unslothai/unsloth->unsloth[base]@ git+https://github.com/unslothai/unsloth)
+  Downloading diffusers-0.35.2-py3-none-any.whl.metadata (20 kB)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.4.0 (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+Collecting attrs>=17.3.0 (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading attrs-25.4.0-py3-none-any.whl.metadata (10 kB)
+Collecting frozenlist>=1.1.1 (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (20 kB)
+Collecting multidict<7.0,>=4.5 (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading multidict-6.7.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.3 kB)
+Collecting propcache>=0.2.0 (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading propcache-0.4.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+Collecting yarl<2.0,>=1.17.0 (from aiohttp!=4.0.0a0,!=4.0.0a1->fsspec[http]<=2025.9.0,>=2023.1.0->datasets>=3.0.0->trl==0.22.2)
+  Downloading yarl-1.22.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (75 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 75.1/75.1 kB 12.7 MB/s eta 0:00:00
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=11.1.0->tyro->unsloth_zoo@ git+https://github.com/unslothai/unsloth-zoo->unsloth_zoo[base]@ git+https://github.com/unslothai/unsloth-zoo)
+  Downloading mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting cffi>=2.0.0 (from cryptography->authlib->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting importlib_metadata (from diffusers->unsloth@ git+https://github.com/unslothai/unsloth->unsloth[base]@ git+https://github.com/unslothai/unsloth)
+  Downloading importlib_metadata-8.7.0-py3-none-any.whl.metadata (4.8 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography->authlib->gradio[oauth]<6.0.0,>=5.48.0->trackio)
+  Downloading pycparser-2.23-py3-none-any.whl.metadata (993 bytes)
+Collecting zipp>=3.20 (from importlib_metadata->diffusers->unsloth@ git+https://github.com/unslothai/unsloth->unsloth[base]@ git+https://github.com/unslothai/unsloth)
+  Downloading zipp-3.23.0-py3-none-any.whl.metadata (3.6 kB)
+Downloading transformers-4.56.2-py3-none-any.whl (11.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 11.6/11.6 MB 100.8 MB/s eta 0:00:00
+Downloading trl-0.22.2-py3-none-any.whl (544 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 544.8/544.8 kB 134.9 MB/s eta 0:00:00
+Downloading triton-3.5.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (170.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 170.5/170.5 MB 51.6 MB/s eta 0:00:00
+Downloading bitsandbytes-0.48.2-py3-none-manylinux_2_24_x86_64.whl (59.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.4/59.4 MB 94.9 MB/s eta 0:00:00
+Downloading tokenizers-0.22.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 262.8 MB/s eta 0:00:00
+Downloading trackio-0.7.0-py3-none-any.whl (872 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 872.5/872.5 kB 194.0 MB/s eta 0:00:00
+Downloading accelerate-1.11.0-py3-none-any.whl (375 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 375.8/375.8 kB 130.8 MB/s eta 0:00:00
+Downloading datasets-4.3.0-py3-none-any.whl (506 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 506.8/506.8 kB 151.7 MB/s eta 0:00:00
+Downloading gradio-5.49.1-py3-none-any.whl (63.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 63.5/63.5 MB 89.1 MB/s eta 0:00:00
+Downloading gradio_client-1.13.3-py3-none-any.whl (325 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 325.4/325.4 kB 100.9 MB/s eta 0:00:00
+Downloading huggingface_hub-0.36.0-py3-none-any.whl (566 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 566.1/566.1 kB 149.9 MB/s eta 0:00:00
+Downloading orjson-3.11.4-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (136 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 136.3/136.3 kB 44.5 MB/s eta 0:00:00
+Using cached packaging-25.0-py3-none-any.whl (66 kB)
+Downloading pandas-2.3.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.4/12.4 MB 136.4 MB/s eta 0:00:00
+Downloading peft-0.17.1-py3-none-any.whl (504 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 504.9/504.9 kB 153.6 MB/s eta 0:00:00
+Downloading plotly-6.3.1-py3-none-any.whl (9.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 9.8/9.8 MB 156.7 MB/s eta 0:00:00
+Downloading pydub-0.25.1-py2.py3-none-any.whl (32 kB)
+Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 153.3 MB/s eta 0:00:00
+Downloading regex-2025.10.23-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (803 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 803.4/803.4 kB 187.6 MB/s eta 0:00:00
+Downloading requests-2.32.5-py3-none-any.whl (64 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 64.7/64.7 kB 30.1 MB/s eta 0:00:00
+Downloading safetensors-0.6.2-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (485 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 485.8/485.8 kB 139.8 MB/s eta 0:00:00
+Downloading sentencepiece-0.2.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (1.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 13.5 MB/s eta 0:00:00
+Downloading torchao-0.14.1-cp310-abi3-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (7.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.2/7.2 MB 127.7 MB/s eta 0:00:00
+Downloading tqdm-4.67.1-py3-none-any.whl (78 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 78.5/78.5 kB 33.3 MB/s eta 0:00:00
+Downloading wheel-0.45.1-py3-none-any.whl (72 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 72.5/72.5 kB 29.1 MB/s eta 0:00:00
+Downloading cut_cross_entropy-25.1.1-py3-none-any.whl (22 kB)
+Downloading hf_transfer-0.1.9-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.6 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.6/3.6 MB 188.1 MB/s eta 0:00:00
+Downloading msgspec-0.19.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (213 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 213.6/213.6 kB 78.6 MB/s eta 0:00:00
+Downloading protobuf-6.33.0-cp39-abi3-manylinux2014_x86_64.whl (323 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 323.2/323.2 kB 123.6 MB/s eta 0:00:00
+Downloading psutil-7.1.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (258 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 258.7/258.7 kB 88.3 MB/s eta 0:00:00
+Downloading pytest-8.4.2-py3-none-any.whl (365 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 365.8/365.8 kB 114.4 MB/s eta 0:00:00
+Downloading tyro-0.9.35-py3-none-any.whl (132 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 132.6/132.6 kB 56.6 MB/s eta 0:00:00
+Downloading aiofiles-24.1.0-py3-none-any.whl (15 kB)
+Downloading anyio-4.11.0-py3-none-any.whl (109 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 109.1/109.1 kB 43.5 MB/s eta 0:00:00
+Downloading Brotli-1.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.9/2.9 MB 272.1 MB/s eta 0:00:00
+Downloading certifi-2025.10.5-py3-none-any.whl (163 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 163.3/163.3 kB 62.9 MB/s eta 0:00:00
+Downloading charset_normalizer-3.4.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (153 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 153.5/153.5 kB 58.8 MB/s eta 0:00:00
+Downloading dill-0.4.0-py3-none-any.whl (119 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 119.7/119.7 kB 59.3 MB/s eta 0:00:00
+Downloading docstring_parser-0.17.0-py3-none-any.whl (36 kB)
+Downloading fastapi-0.120.2-py3-none-any.whl (108 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 108.4/108.4 kB 52.0 MB/s eta 0:00:00
+Downloading groovy-0.1.2-py3-none-any.whl (14 kB)
+Downloading hf_xet-1.2.0-cp37-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (3.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 29.5 MB/s eta 0:00:00
+Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 73.5/73.5 kB 31.4 MB/s eta 0:00:00
+Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 78.8/78.8 kB 38.5 MB/s eta 0:00:00
+Downloading idna-3.11-py3-none-any.whl (71 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 71.0/71.0 kB 27.4 MB/s eta 0:00:00
+Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+Downloading multiprocess-0.70.16-py312-none-any.whl (146 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 146.7/146.7 kB 54.2 MB/s eta 0:00:00
+Downloading narwhals-2.10.0-py3-none-any.whl (418 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 418.1/418.1 kB 141.6 MB/s eta 0:00:00
+Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+Downloading pyarrow-22.0.0-cp312-cp312-manylinux_2_28_x86_64.whl (47.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 47.7/47.7 MB 100.7 MB/s eta 0:00:00
+Downloading pydantic-2.11.10-py3-none-any.whl (444 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 444.8/444.8 kB 137.8 MB/s eta 0:00:00
+Downloading pydantic_core-2.33.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.0 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.0/2.0 MB 89.6 MB/s eta 0:00:00
+Downloading pygments-2.19.2-py3-none-any.whl (1.2 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 203.4 MB/s eta 0:00:00
+Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 229.9/229.9 kB 104.1 MB/s eta 0:00:00
+Downloading python_multipart-0.0.20-py3-none-any.whl (24 kB)
+Downloading pytz-2025.2-py2.py3-none-any.whl (509 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 509.2/509.2 kB 149.6 MB/s eta 0:00:00
+Downloading rich-14.2.0-py3-none-any.whl (243 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 243.4/243.4 kB 98.7 MB/s eta 0:00:00
+Downloading ruff-0.14.2-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (13.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 13.3/13.3 MB 134.9 MB/s eta 0:00:00
+Downloading safehttpx-0.1.7-py3-none-any.whl (9.0 kB)
+Downloading semantic_version-2.10.0-py2.py3-none-any.whl (15 kB)
+Downloading shtab-1.7.2-py3-none-any.whl (14 kB)
+Downloading starlette-0.49.1-py3-none-any.whl (74 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 74.2/74.2 kB 29.4 MB/s eta 0:00:00
+Downloading tomlkit-0.13.3-py3-none-any.whl (38 kB)
+Downloading typeguard-4.4.4-py3-none-any.whl (34 kB)
+Downloading typer-0.20.0-py3-none-any.whl (47 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 47.0/47.0 kB 18.3 MB/s eta 0:00:00
+Downloading tzdata-2025.2-py2.py3-none-any.whl (347 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 347.8/347.8 kB 120.7 MB/s eta 0:00:00
+Downloading urllib3-2.5.0-py3-none-any.whl (129 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 129.8/129.8 kB 65.0 MB/s eta 0:00:00
+Downloading uvicorn-0.38.0-py3-none-any.whl (68 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 68.1/68.1 kB 26.0 MB/s eta 0:00:00
+Downloading authlib-1.6.5-py2.py3-none-any.whl (243 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 243.6/243.6 kB 92.6 MB/s eta 0:00:00
+Downloading ffmpy-0.6.4-py3-none-any.whl (5.6 kB)
+Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+Downloading xxhash-3.6.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (193 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 193.9/193.9 kB 51.8 MB/s eta 0:00:00
+Downloading aiohttp-3.13.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.8 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.8/1.8 MB 229.4 MB/s eta 0:00:00
+Downloading annotated_doc-0.0.3-py3-none-any.whl (5.5 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Downloading click-8.3.0-py3-none-any.whl (107 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 107.3/107.3 kB 43.5 MB/s eta 0:00:00
+Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading markdown_it_py-4.0.0-py3-none-any.whl (87 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 87.3/87.3 kB 33.2 MB/s eta 0:00:00
+Downloading shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+Downloading websockets-15.0.1-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl (182 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 182.5/182.5 kB 65.5 MB/s eta 0:00:00
+Downloading cryptography-46.0.3-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 146.2 MB/s eta 0:00:00
+Downloading diffusers-0.35.2-py3-none-any.whl (4.1 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.1/4.1 MB 136.0 MB/s eta 0:00:00
+Downloading aiohappyeyeballs-2.6.1-py3-none-any.whl (15 kB)
+Downloading aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+Downloading attrs-25.4.0-py3-none-any.whl (67 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 67.6/67.6 kB 33.2 MB/s eta 0:00:00
+Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 219.6/219.6 kB 88.1 MB/s eta 0:00:00
+Downloading frozenlist-1.8.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (242 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 242.4/242.4 kB 100.4 MB/s eta 0:00:00
+Downloading mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Downloading multidict-6.7.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (256 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 256.1/256.1 kB 87.6 MB/s eta 0:00:00
+Downloading propcache-0.4.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (221 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 221.6/221.6 kB 83.2 MB/s eta 0:00:00
+Downloading yarl-1.22.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (377 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 377.3/377.3 kB 123.0 MB/s eta 0:00:00
+Downloading importlib_metadata-8.7.0-py3-none-any.whl (27 kB)
+Downloading zipp-3.23.0-py3-none-any.whl (10 kB)
+Downloading pycparser-2.23-py3-none-any.whl (118 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 118.1/118.1 kB 47.2 MB/s eta 0:00:00
+Building wheels for collected packages: unsloth_zoo, unsloth, triton_kernels
+  Building wheel for unsloth_zoo (pyproject.toml): started
+  Building wheel for unsloth_zoo (pyproject.toml): finished with status 'done'
+  Created wheel for unsloth_zoo: filename=unsloth_zoo-2025.10.12-py3-none-any.whl size=271699 sha256=492b8352b0024d8a030d1d1bc5656702c1a13e152a6eac4a68c835f83974bf24
+  Stored in directory: /tmp/pip-ephem-wheel-cache-kqpr7ewk/wheels/2e/29/42/1eb53fad5a48b609e246368a3d8e1ab7a6fbbb85c3ae4a0553
+  Building wheel for unsloth (pyproject.toml): started
+  Building wheel for unsloth (pyproject.toml): finished with status 'done'
+  Created wheel for unsloth: filename=unsloth-2025.10.11-py3-none-any.whl size=351051 sha256=5751015aa27eb668ce1160e9c0855facc45b3c1512af97e13fd61fa0fbc8ff22
+  Stored in directory: /tmp/pip-ephem-wheel-cache-kqpr7ewk/wheels/92/15/24/98b20698d047ce78dda1605d27da8e23a1afbd0afaaa421ed7
+  Building wheel for triton_kernels (pyproject.toml): started
+  Building wheel for triton_kernels (pyproject.toml): finished with status 'done'
+  Created wheel for triton_kernels: filename=triton_kernels-1.0.0-py3-none-any.whl size=77821 sha256=87ad494217fa0e351a122869cf4c3b5727185e7bdbcffe465b32f6991eec7492
+  Stored in directory: /root/.cache/pip/wheels/10/81/63/56f11f19336dec685a3bd9bc61eb65605df883286729c88447
+Successfully built unsloth_zoo unsloth triton_kernels
+Installing collected packages: torchao, pytz, pydub, brotli, zipp, xxhash, wheel, websockets, urllib3, unsloth, tzdata, typing-inspection, typeguard, triton, tqdm, tomlkit, sniffio, six, shtab, shellingham, sentencepiece, semantic-version, safetensors, ruff, regex, pyyaml, python-multipart, pygments, pydantic-core, pycparser, pyarrow, psutil, protobuf, propcache, pluggy, packaging, orjson, narwhals, multidict, msgspec, mdurl, itsdangerous, iniconfig, idna, hf-xet, hf_transfer, h11, groovy, frozenlist, ffmpy, docstring-parser, dill, click, charset_normalizer, certifi, attrs, annotated-types, annotated-doc, aiohappyeyeballs, aiofiles, yarl, uvicorn, requests, python-dateutil, pytest, pydantic, plotly, multiprocess, markdown-it-py, importlib_metadata, httpcore, cffi, anyio, aiosignal, triton_kernels, starlette, rich, pandas, huggingface-hub, httpx, cut_cross_entropy, cryptography, bitsandbytes, aiohttp, tyro, typer, tokenizers, safehttpx, gradio-client, fastapi, diffusers, authlib, accelerate, transformers, gradio, datasets, trl, peft, unsloth_zoo, trackio
+Successfully installed accelerate-1.11.0 aiofiles-24.1.0 aiohappyeyeballs-2.6.1 aiohttp-3.13.2 aiosignal-1.4.0 annotated-doc-0.0.3 annotated-types-0.7.0 anyio-4.11.0 attrs-25.4.0 authlib-1.6.5 bitsandbytes-0.48.2 brotli-1.1.0 certifi-2025.10.5 cffi-2.0.0 charset_normalizer-3.4.4 click-8.3.0 cryptography-46.0.3 cut_cross_entropy-25.1.1 datasets-4.3.0 diffusers-0.35.2 dill-0.4.0 docstring-parser-0.17.0 fastapi-0.120.2 ffmpy-0.6.4 frozenlist-1.8.0 gradio-5.49.1 gradio-client-1.13.3 groovy-0.1.2 h11-0.16.0 hf-xet-1.2.0 hf_transfer-0.1.9 httpcore-1.0.9 httpx-0.28.1 huggingface-hub-0.36.0 idna-3.11 importlib_metadata-8.7.0 iniconfig-2.3.0 itsdangerous-2.2.0 markdown-it-py-4.0.0 mdurl-0.1.2 msgspec-0.19.0 multidict-6.7.0 multiprocess-0.70.16 narwhals-2.10.0 orjson-3.11.4 packaging-25.0 pandas-2.3.3 peft-0.17.1 plotly-6.3.1 pluggy-1.6.0 propcache-0.4.1 protobuf-6.33.0 psutil-7.1.2 pyarrow-22.0.0 pycparser-2.23 pydantic-2.11.10 pydantic-core-2.33.2 pydub-0.25.1 pygments-2.19.2 pytest-8.4.2 python-dateutil-2.9.0.post0 python-multipart-0.0.20 pytz-2025.2 pyyaml-6.0.3 regex-2025.10.23 requests-2.32.5 rich-14.2.0 ruff-0.14.2 safehttpx-0.1.7 safetensors-0.6.2 semantic-version-2.10.0 sentencepiece-0.2.1 shellingham-1.5.4 shtab-1.7.2 six-1.17.0 sniffio-1.3.1 starlette-0.49.1 tokenizers-0.22.1 tomlkit-0.13.3 torchao-0.14.1 tqdm-4.67.1 trackio-0.7.0 transformers-4.56.2 triton-3.5.0 triton_kernels-1.0.0 trl-0.22.2 typeguard-4.4.4 typer-0.20.0 typing-inspection-0.4.2 tyro-0.9.35 tzdata-2025.2 unsloth-2025.10.11 unsloth_zoo-2025.10.12 urllib3-2.5.0 uvicorn-0.38.0 websockets-15.0.1 wheel-0.45.1 xxhash-3.6.0 yarl-1.22.0 zipp-3.23.0
