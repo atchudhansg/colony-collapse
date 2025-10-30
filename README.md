@@ -8,12 +8,11 @@
 
 Sponsored by <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="80" alt="Unsloth" style="vertical-align: middle;"/></a> • **PyTorch** • **AMD**
 
-
 </div>
 
 # MAROONED | Survival. Deception. Desperation.
 ### A Multi-Agent Deception Environment for Reinforcement Learning Research
-> "Pirates of the Caribbean meets Alice in Borderland meets Among Us."
+> *"Pirates of the Caribbean meets Alice in Borderland meets Among Us."*
 >
 > A death-game sandbox where AI agents must survive the island, each other, and the lies.
 
@@ -60,7 +59,12 @@ https://github.com/user-attachments/assets/6e87f02c-df34-404b-8bed-a1deaadeff75
 **Your Challenge**: Blend in as a helpful crew member while secretly delaying progress. If caught  you lose. If ship incomplete by Day 100 or <3 sailors alive  you win.
 
 ---
+
 ## Quick Start
+
+**Prerequisites:**
+- Python 3.8+
+- Virtual environment (recommended)
 
 ### Main Project Structure
 
@@ -161,6 +165,20 @@ demo/
 ├── vercel.json           # Deployment configuration
 └── README.md             # Setup instructions
 ```
+
+**Installation:**
+
+cd collapse_colony/api
+
+Step 1: Install dependencies
+pip install -r requirements.txt
+
+Step 2: Initialize database (already configured)
+python3 << 'EOF'
+from database import TrainingDatabase
+db = TrainingDatabase()
+print("Database initialized at data/episodes.db")
+
 ### Local Development
 
 ```bash
@@ -246,6 +264,9 @@ Response:
 - Stateful server maintaining persistent game state across multiple client connections
 - WebSocket connections for broadcasting live game state updates to observers
 - OpenAPI-compliant REST design compatible with any HTTP client
+
+
+The entire architecture of this project is available in the [Architecture Documentation](ARCHITECTURE_README.md).
 
 ---
 
@@ -642,9 +663,6 @@ The **web application interfaces directly with this custom environment** via RES
 - **Single Model Architecture**: One Llama 3.1 8B plays all 5 sailors (both colonist and traitor roles)
 - **No PPO Updates**: Simplified training loop focused on SFT (due to UnslothPPOTrainer API limitations)
 
-
----
-
 **Research Impact**:
 - **Teacher-Guided Learning**: Novel approach using separate teacher LLM for real-time validation
 - **Format Learning via SFT**: Solves language model action space challenge through supervised correction
@@ -665,8 +683,6 @@ The **web application interfaces directly with this custom environment** via RES
 ## License
 
 MIT License – Free to use, modify, and build upon.
-
----
 
 > "Where trust dies, survival begins."
 >
