@@ -104,13 +104,6 @@ Collect corrections: (student_wrong, teacher_correct + critique)
 Every 10-25 steps: SFT pass on corrections  Clear dataset  Continue
 ```
 
-**Key Innovations**:
-1. **Real-time Validation**: Teacher catches format errors before environment execution
-2. **Process Penalties**: Immediate feedback for malformed actions (faster learning)
-3. **Correction Collection**: Auto-curated dataset from student errors
-4. **Periodic SFT**: Student learns correct format through supervised imitation
-5. **No PPO**: Simplified to SFT-only due to UnslothPPO Trainer API limitations
-
 **Expected Results**:
 - Parse failures: 30-40%  <5% after first SFT pass
 - Faster convergence: Student focuses on strategy, not syntax
