@@ -339,7 +339,6 @@ def broadcast_episode_end(episode_id: int, result_data: Dict[str, Any]):
 # ===================================================================
 # ERROR HANDLERS
 # ===================================================================
-
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Endpoint not found'}), 404

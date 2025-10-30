@@ -268,7 +268,7 @@ class FileStorage:
     def load_episode(self, episode_id: int) -> Optional[Dict[str, Any]]:
         """Load episode from JSON file"""
         filename = self.episodes_dir / f"episode_{episode_id}.json"
-        
+
         if not filename.exists():
             return None
         
