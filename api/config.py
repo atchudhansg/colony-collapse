@@ -12,7 +12,7 @@ load_dotenv(dotenv_path=env_path)
 
 class Config:
     """Base configuration"""
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-in-production')
     DEBUG = False
     TESTING = False
     
