@@ -1,0 +1,10 @@
+Flask==3.0.0
+Flask-CORS==4.0.0
+Flask-SocketIO==5.3.5
+python-socketio==5.9.0
+python-engineio==4.7.1
+SQLAlchemy==2.0.23
+python-dotenv==1.0.0
+requests==2.31.0
+numpy==1.24.3
+pandas==2.1.1
