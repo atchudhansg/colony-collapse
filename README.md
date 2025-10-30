@@ -1,14 +1,205 @@
-# MAROONED  Survival. Deception. Desperation.
+# MAROONED | Survival. Deception. Desperation.
 
 ### *A Multi-Agent Deception Environment for Reinforcement Learning Research*
 
 > *"**Pirates of the Caribbean** meets **Alice in Borderland** meets **Among Us**."*
 >
-> *A death-game sandbox where AI agents must survive the island, each other, and the lies.*
+> A death-game sandbox where AI agents must survive the island, each other, and the lies.
+
+<div align="center">
+  <a href="https://github.com/meta-pytorch/OpenEnv"><img src="https://github.com/user-attachments/assets/2700a971-e5d6-4036-b03f-2f89c9791609" width="35" height="35" alt="OpenEnv"></a>
+  <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="115" alt="Unsloth"></a>
+  <a href="https://pytorch.org/"><img src="https://pytorch.org/assets/images/pytorch-logo.png" width="150" alt="PyTorch"></a>
+</div>
+
+<div align="center">
+  <p><i>Part of the Synthetic Data AI Agents Challenge</i></p>
+  <p><b>Hosted by Unsloth, PyTorch & AMD | October 18-20, 2025</b></p>
+</div>
 
 <div align="center">
   <img src="https://miro.medium.com/v2/resize:fit:1400/0*c5_m_uaIMUKVK-P_.png" alt="MAROONED Poster" width="800"/>
 </div>
+
+---
+
+## Built with OpenEnv
+
+We're using the new [OpenEnv](https://github.com/meta-pytorch/OpenEnv) library which provides 2000+ environments for RL research!
+
+<div align="center">
+  <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="115"></a>
+  <a href="https://discord.gg/unsloth"><img src="https://github.com/unslothai/unsloth/raw/main/images/Discord button.png" width="145"></a>
+  <a href="https://docs.unsloth.ai/"><img src="https://github.com/unslothai/unsloth/blob/main/images/documentation%20green%20button.png?raw=true" width="125"></a></a> Join Discord if you need help + ⭐ <i>Star us on <a href="https://github.com/unslothai/unsloth">Github</a> </i> ⭐
+</div>
+
+To install Unsloth on your local device, follow [our guide](https://docs.unsloth.ai/get-started/install-and-update).
+
+---
+
+## Video Demonstration
+
+Watch AI agents playing MAROONED in real-time, showcasing the sophisticated multi-agent deception mechanics and emergent behavior:
+
+https://github.com/user-attachments/assets/6e87f02c-df34-404b-8bed-a1deaadeff75
+
+**What the demonstration shows:**
+
+The video captures a complete gameplay session where five AI agents navigate the complex social dynamics of MAROONED. You'll witness:
+
+- **Real-time Strategic Decision-Making**: Agents dynamically respond to environmental changes, resource availability, and social threats across 10,000 timesteps
+- **Emergent Deception Behavior**: The traitor agent develops sophisticated lying strategies without any scripted behaviors—learning to report false resource locations, sabotage when unobserved, and maintain a convincing cover story
+- **Evidence-Based Detection**: Honest agents cross-reference teammate reports with observed behavior, identifying contradictions like location mismatches and unexplained resource shortages
+- **Coordinated Ship Building**: Multi-agent collaboration requiring spatial coordination (2+ sailors must be adjacent) and resource pooling from shared inventory
+- **Live Game State Updates**: Every turn displays comprehensive status information—sailor positions on a 30×30 multi-level island, energy bars, ship construction progress, and action reasoning
+
+The interface updates in real-time with detailed turn summaries showing:
+- Sailor status tables with health, energy, positions, and role indicators
+- Ship construction progress broken down by component (Hull, Mast, Sail, Rudder, Supplies)
+- Individual action logs with agent reasoning for each decision
+- Three-layer island maps (Ground level, Mountain terrain, Underground caves)
+- Common inventory tracking at the base camp
+
+This demonstration validates MAROONED's technical achievements: handling 8,700-token observations, maintaining coherent long-horizon planning over 100× longer episodes than typical RL environments, and enabling emergent social deception without hardcoded traitor scripts.
+
+---
+
+## Interactive Web Application
+
+Experience MAROONED through our full-stack demo application, showcasing AI agents in action through an intuitive web interface.
+
+### Live Demo
+
+**🌐 [https://maroon-demo.vercel.app/](https://maroon-demo.vercel.app/)**
+
+The online demo runs a simplified simulation using a 1-billion parameter language model, optimized for real-time browser performance while maintaining the core gameplay mechanics. This allows anyone to observe multi-agent deception dynamics without requiring local GPU infrastructure.
+
+### Features
+
+- **Real-time Gameplay Visualization**: Watch 5 AI agents navigate the island, gather resources, and build the ship with live state updates
+- **Agent Perspective View**: Toggle between sailor viewpoints to see individual observations, reasoning processes, and strategic decisions
+- **Deception Detection Dashboard**: Track evidence logs showing suspicious behavior—location mismatches, resource theft, poison sightings
+- **Ship Construction Progress**: Live component-by-component build status with visual progress indicators
+- **Multi-Level Map Rendering**: Interactive ground, mountain, and cave layers with real-time agent positions
+- **Communication Feed**: Read agent messages and cross-reference claims with actual behavior to identify lies
+- **Democratic Voting Interface**: Observe elimination votes as agents accuse suspected traitors based on accumulated evidence
+
+### API Architecture
+
+The application uses a RESTful API design where agents interact with the MAROONED environment through standardized HTTP endpoints:
+
+```
+Web Client → Next.js Frontend → FastAPI Backend → MAROONED Environment
+                                      ↓
+                              Single-Agent Interface
+                                      ↓
+                           Returns: Observation, Reward, Done
+```
+
+**Endpoint Structure:**
+```python
+POST /api/action
+{
+  "sailor_id": "Alice",
+  "action_type": "GATHER",
+  "target": "WOOD_001",
+  "reasoning": "Collecting wood to build the hull..."
+}
+
+Response:
+{
+  "observation": {
+    "position": {"x": 15, "y": 15, "level": "GROUND"},
+    "energy": 95,
+    "visible_resources": [...],
+    "ship_progress": 15
+  },
+  "reward": 2.0,
+  "done": false,
+  "info": {...}
+}
+```
+
+**Implementation Details:**
+- Single-agent interface where each sailor communicates independently via API calls
+- Stateful server maintaining persistent game state across multiple client connections
+- WebSocket connections for broadcasting live game state updates to observers
+- OpenAPI-compliant REST design compatible with any HTTP client
+
+### Technology Stack
+
+**Frontend:**
+- Next.js 14 with React 18 for server-side rendering and optimal performance
+- TypeScript for type-safe component development
+- Tailwind CSS for responsive, minimalist UI design
+- WebSocket client for real-time game state synchronization
+
+**Backend:**
+- FastAPI for high-performance async API endpoints
+- Python 3.10+ with type hints for robust error handling
+- MAROONED environment integration via OpenEnv standard
+- CORS middleware for cross-origin requests from Vercel deployment
+
+**Deployment:**
+- Vercel for frontend hosting with automatic CI/CD from GitHub
+- Edge runtime for low-latency global distribution
+- Environment variables for API endpoint configuration
+
+### Repository Structure
+
+```
+demo/
+├── api/                    # FastAPI backend
+│   ├── server.py          # Main API server with MAROONED integration
+│   ├── routes.py          # REST endpoint definitions
+│   └── requirements.txt   # Python dependencies
+├── frontend/              # Next.js application
+│   ├── components/        # React components
+│   │   ├── GameMap.tsx   # Multi-level island visualization
+│   │   ├── SailorCard.tsx # Agent status display
+│   │   └── ShipStatus.tsx # Construction progress tracker
+│   ├── pages/
+│   │   ├── index.tsx     # Main game interface
+│   │   └── api/          # API route handlers
+│   ├── public/           # Static assets
+│   └── package.json      # Node dependencies
+├── vercel.json           # Deployment configuration
+└── README.md             # Setup instructions
+```
+
+### Local Development
+
+```bash
+# Clone repository
+git clone https://github.com/atchudhansg/colony-collapse.git
+cd colony-collapse/demo
+
+# Install backend dependencies
+pip install -r api/requirements.txt
+
+# Install frontend dependencies
+cd frontend && npm install
+
+# Start API server (terminal 1)
+python api/server.py
+
+# Start frontend dev server (terminal 2)
+npm run dev
+
+# Access application at http://localhost:3000
+```
+
+### Deploying to Vercel
+
+```bash
+cd demo/frontend
+vercel deploy --prod
+```
+
+Environment variables required:
+```env
+NEXT_PUBLIC_API_URL=<your-api-server-url>
+```
 
 ---
 
@@ -502,108 +693,17 @@ Step 002/5 | Reward:  -15.1 | Avg(10):  -12.0 | Corrections:  181 | Time: 472.7s
 ```
 
 **What You See:**
--  **Sailor Status**: Health, energy bars, positions, poison/traitor indicators
--  **Ship Progress**: Component-by-component build status with visual progress bars
--  **Common Inventory**: Shared resources at base camp
--  **Actions & Reasoning**: What each sailor did this turn + their thought process
--  **3-Level Island Maps**: Ground (3030), Mountains (1010), Caves (1515)
--  **Real-time Updates**: Watch AI explore, gather, build, and deceive
--  **Teacher Validation**: Live API calls to Mixtral-8x7B for action correction
+- Sailor Status: Health, energy bars, positions, poison/traitor indicators updated every turn
+- Ship Progress: Component-by-component build status with visual progress bars
+- Common Inventory: Shared resources at base camp
+- Actions & Reasoning: What each sailor did this turn plus their thought process
+- 3-Level Island Maps: Ground (30×30), Mountains (10×10), Caves (15×15)
+- Real-time Updates: Watch AI explore, gather, build, and deceive with turn-by-turn state changes
+- Teacher Validation: Live API calls to Mixtral-8x7B for action correction
 
 This visualization runs on the **first episode of training** to give you insight into how the AI plays the game, then switches to silent mode for performance.
 
 </details>
-
----
-
-## 🎮 Live Demo & Interactive Application
-
-### **📹 Video Demonstration**
-
-Watch AI agents playing MAROONED in action:
-
-> **[🎬 Click here to watch the demo video](https://github.com/atchudhansg/colony-collapse/releases/download/v1.0/demo-video.mp4)**
->
-> *Upload your video to: [GitHub Releases](https://github.com/atchudhansg/colony-collapse/releases/new) or [YouTube](https://youtube.com) and replace the link above*
-
-**What You'll See**:
-- 5 AI agents navigating the island in real-time
-- Resource gathering and ship construction progress
-- Deception mechanics: lies detected through evidence logs
-- Agent reasoning and decision-making process
-- Complete game cycle from start to win/loss condition
-
----
-
-### **🌐 Play MAROONED Online**
-
-Experience AI agents playing the game in real-time through our interactive web application:
-
-**Live Demo**: [https://maroon-demo.vercel.app/](https://maroon-demo.vercel.app/)
-
-**Interactive Features**:
-- **Real-time Gameplay Visualization**: Watch 5 AI agents navigate the island, gather resources, and build the ship
-- **Agent Perspectives**: See what each sailor observes, their reasoning, and actions taken
-- **Deception Detection**: Track evidence logs showing suspicious behavior (location mismatches, resource theft, poison sightings)
-- **Ship Construction Progress**: Live updates showing component-by-component build status
-- **Multi-Level Map View**: Ground, mountain, and cave layers with real-time agent positions
-- **Communication Feed**: Read agent messages and detect lies by cross-referencing their claims with actual behavior
-- **Voting System**: Watch democratic elimination votes unfold as agents accuse suspected traitors
-
-### **API Architecture**
-
-The demo application uses a **REST API** architecture where agents interact with the environment through HTTP endpoints:
-
-```
-Client (Web App)  →  API Server  →  MAROONED Environment
-                       ↓
-                  Single Agent Interface
-                       ↓
-                  Returns: Observation,
-                          Reward, Done
-```
-
-**Endpoint Structure**:
-```python
-POST /api/action
-{
-  "sailor_id": "Alice",
-  "action_type": "GATHER",
-  "target": "WOOD_001",
-  "reasoning": "Collecting wood to build the hull..."
-}
-
-Response:
-{
-  "observation": {
-    "position": {"x": 15, "y": 15, "level": "GROUND"},
-    "energy": 95,
-    "visible_resources": [...],
-    "ship_progress": 15
-  },
-  "reward": 2.0,
-  "done": false,
-  "info": {...}
-}
-```
-
-**Implementation Details**:
-- **Single-Agent Interface**: Each agent communicates independently with the environment via API calls
-- **Stateful Server**: Game state persists on server, allowing multiple clients to observe the same episode
-- **Real-time Updates**: WebSocket connections for live game state broadcasting to viewers
-- **RESTful Design**: Follows OpenAPI standards for compatibility with any HTTP client
-
-**Repository Structure**:
-```
-demo/                    # Demo application code
-├── api/                 # FastAPI backend
-│   ├── server.py       # Main API server
-│   └── routes.py       # Endpoint definitions
-├── frontend/           # Next.js web app
-│   ├── components/     # React components (map, agent cards, ship status)
-│   └── pages/          # Application routes
-└── README.md           # Demo setup instructions
-```
 
 ---
 
@@ -724,9 +824,9 @@ colony-collapse/
 
 ---
 
-## 🏆 OpenEnv Hackathon 2025
+## OpenEnv Hackathon 2025
 
-**Achievement**: 🥈 **2nd Place** ($500 + Ray-Ban Meta Glasses)  
+**Achievement**: 2nd Place ($500 + Ray-Ban Meta Glasses)  
 **Score**: 197/200 points  
 
 **Judges' Recognition**:
@@ -735,27 +835,17 @@ colony-collapse/
 - "Emergent deception mechanics without scripted events"
 - "Production-ready demo application showcasing multi-agent interaction"
 
-**Key Differentiators**:
-1. **Process Reward Modeling**: Only submission using LLM-as-judge for action validation
-2. **Live Demo**: Interactive Vercel app with real-time gameplay visualization
-3. **Scale**: 10,000-step episodes with 8,700-token observations (100× longer than typical RL tasks)
-4. **API-First Design**: RESTful endpoints allowing agent-environment interaction via HTTP
-
 ---
-**Video Demonstration**:
 
+## Why This Matters
 
-
-https://github.com/user-attachments/assets/6e87f02c-df34-404b-8bed-a1deaadeff75
-
-
-## 💡 Why This Matters
+MAROONED pushes the boundaries of what language models can learn in reinforcement learning environments:
 
 **Research Impact**:
 - **Teacher-Guided Learning**: Novel approach using separate teacher LLM for real-time validation
 - **Format Learning via SFT**: Solves language model action space challenge through supervised correction
 - **Emergent Deception**: First environment where deception emerges from learned behavior, not scripting
-- **Long-Horizon Language RL**: 10 longer episodes than typical language-based RL tasks
+- **Long-Horizon Language RL**: 100× longer episodes than typical language-based RL tasks
 - **Multi-Agent Theory of Mind**: Agents must model beliefs of others to deceive effectively
 - **Sparse Reward Learning**: Tests if LLMs can plan toward distant goals with minimal feedback
 
@@ -769,30 +859,12 @@ https://github.com/user-attachments/assets/6e87f02c-df34-404b-8bed-a1deaadeff75
 
 ---
 
-## 📜 License
+## License
 
 MIT License – Free to use, modify, and build upon.
 
 ---
 
-## 🙏 Acknowledgments
-
-- **OpenEnv Team**: For the hackathon and framework standards
-- **Unsloth**: For optimized Llama 3.1 8B training infrastructure
-- **AMD**: MI300X hardware support with ROCm optimizations
-- **vLLM**: High-performance teacher model serving
-
----
-
-## 📧 Contact
-
-**Author**: Atchudhan Sreekanth  
-**GitHub**: [@atchudhansg](https://github.com/atchudhansg)  
-**Demo**: [https://maroon-demo.vercel.app/](https://maroon-demo.vercel.app/)  
-**Repository**: [colony-collapse](https://github.com/atchudhansg/colony-collapse)
-
----
-
-> *"Where trust dies, survival begins."*
+> "Where trust dies, survival begins."
 >
 > MAROONED tests whether AI can master the most human challenge of all: **knowing when to trust, and when to deceive**.
