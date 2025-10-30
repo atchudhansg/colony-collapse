@@ -15,9 +15,9 @@ from typing import Optional, Dict, Any, Tuple
 from models import Observation, Action, Position
 from config import ActionType, ResourceType, ShipComponent, MapLevel
 
-# Ollama Teacher API Configuration
-OLLAMA_API_URL = "http://localhost:11434/api/chat"
-TEACHER_MODEL_NAME = "mixtral:8x22b"
+# vLLM Teacher API Configuration (OpenAI-compatible)
+VLLM_API_URL = "http://localhost:8000/v1/chat/completions"
+TEACHER_MODEL_NAME = "mistralai/Mixtral-8x7B-Instruct-v0.1"
 
 
 # ============================================================================
@@ -956,6 +956,69 @@ ACTION: <your action command>
     return base_text + "\n" + action_instructions
 
 
+def observation_to_condensed_prompt(obs: Observation) -> str:
+    """
+    Create a CONDENSED observation for teacher validation (reduces token usage).
+    Removes verbose action lists since teacher already knows valid actions.
+    
+    Args:
+        obs: The observation object
+    
+    Returns:
+        Minimal observation text for teacher context
+    """
+    # Essential game state only
+    condensed = f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GAME STATE (Day {obs.day}/100, Turn {obs.turn}/100)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+YOUR STATUS:
+Position: {obs.position}
+Energy: {obs.energy}/100
+Backpack: {len(obs.backpack)}/20 items
+"""
+    
+    # Visible resources (condensed) - use spatial_view
+    if hasattr(obs.spatial_view, 'visible_resources') and obs.spatial_view.visible_resources:
+        condensed += f"\nVISIBLE RESOURCES ({len(obs.spatial_view.visible_resources)}):\n"
+        for res in list(obs.spatial_view.visible_resources)[:5]:  # Show first 5 only
+            condensed += f"  {res.resource_id} ({res.resource_type.value}) at {res.position}\n"
+        if len(obs.spatial_view.visible_resources) > 5:
+            condensed += f"  ... and {len(obs.spatial_view.visible_resources) - 5} more\n"
+    
+    # Other sailors (condensed) - visible_sailors is a set of sailor IDs (strings)
+    if hasattr(obs.spatial_view, 'visible_sailors') and obs.spatial_view.visible_sailors:
+        condensed += f"\nOTHER SAILORS ({len(obs.spatial_view.visible_sailors)}):\n"
+        for sailor_id in list(obs.spatial_view.visible_sailors)[:3]:  # Show first 3 only
+            energy_info = obs.all_sailors_energy.get(sailor_id, "?")
+            # Get position from all_sailor_positions if available (traitor vision)
+            if obs.all_sailor_positions and sailor_id in obs.all_sailor_positions:
+                position = obs.all_sailor_positions[sailor_id]
+                condensed += f"  {sailor_id}: {position}, Energy {energy_info}/100\n"
+            else:
+                condensed += f"  {sailor_id}: (nearby), Energy {energy_info}/100\n"
+        if len(obs.spatial_view.visible_sailors) > 3:
+            condensed += f"  ... and {len(obs.spatial_view.visible_sailors) - 3} more\n"
+    
+    # Ship progress (essential)
+    condensed += f"\nSHIP PROGRESS: {obs.ship_progress.total_percentage}%\n"
+    
+    # Common inventory (condensed)
+    if obs.common_inventory:
+        condensed += f"COMMON INVENTORY: "
+        inv_items = []
+        for item in obs.common_inventory[:4]:
+            inv_items.append(f"{item.resource_type.value}={item.quantity}")
+        condensed += ", ".join(inv_items)
+        if len(obs.common_inventory) > 4:
+            condensed += f" +{len(obs.common_inventory) - 4} more"
+        condensed += "\n"
+    
+    condensed += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    return condensed
+
+
 # ============================================================================
 # TEACHER-GUIDED ACTION PARSING (Process Reward Modeling)
 # ============================================================================
@@ -966,7 +1029,7 @@ def teacher_validate_student_output(
     sailor_id: str
 ) -> Dict[str, Any]:
     """
-    Send student LLM output to teacher (Ollama Mixtral) for validation and correction.
+    Send student LLM output to teacher (vLLM Mixtral) for validation and correction.
     
     This is the CORE of process reward modeling:
     - Student generates potentially malformed output
@@ -987,37 +1050,46 @@ def teacher_validate_student_output(
             - valid: bool (was original output valid?)
             - teacher_response: str (full teacher output for logging)
     """
-    # Build teacher prompt with full observation context + student output
-    full_observation_text = observation.to_text()
+    # Build teacher prompt with CONDENSED observation (reduce tokens)
+    condensed_observation = observation_to_condensed_prompt(observation)
     
     user_prompt = f"""STUDENT OUTPUT:
 {student_response}
 
 GAME STATE:
-{full_observation_text}"""
+{condensed_observation}"""
 
-    # Query Ollama teacher API
+    # Query vLLM teacher API (OpenAI-compatible endpoint)
+    # Note: Mixtral uses Instruct format, combine system + user into single user message
+    combined_prompt = f"{TEACHER_SYSTEM_PROMPT}\n\n{user_prompt}"
+    
     payload = {
         "model": TEACHER_MODEL_NAME,
         "messages": [
-            {"role": "system", "content": TEACHER_SYSTEM_PROMPT},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": combined_prompt}
         ],
-        "stream": False,
-        "options": {
-            "temperature": 0.1,
-            "top_p": 1.0,
-            "num_predict": 200
-        }
+        "temperature": 0.1,
+        "top_p": 1.0,
+        "max_tokens": 200,
+        "stream": False
     }
     
     try:
-        response = requests.post(OLLAMA_API_URL, json=payload, timeout=30)
+        response = requests.post(VLLM_API_URL, json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
-        teacher_response = data["message"]["content"].strip()
+        teacher_response = data["choices"][0]["message"]["content"].strip()
+    except requests.exceptions.HTTPError as e:
+        # HTTP error with details
+        error_detail = ""
+        try:
+            error_detail = f" - {response.json()}"
+        except:
+            error_detail = f" - {response.text[:200]}"
+        print(f"⚠️  Teacher API error: {e}{error_detail}")
+        teacher_response = f"VALID: NO\nACTION: WAIT\nPENALTY: -2.0\nCRITIQUE: Teacher API error - defaulting to WAIT"
     except requests.exceptions.RequestException as e:
-        # Fallback if Ollama server unreachable
+        # Other connection errors
         print(f"⚠️  Teacher API error: {e}")
         teacher_response = f"VALID: NO\nACTION: WAIT\nPENALTY: -2.0\nCRITIQUE: Teacher API unavailable - defaulting to WAIT"
     
