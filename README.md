@@ -1,15 +1,13 @@
 # MAROONED | Survival. Deception. Desperation.
 
-### *A Multi-Agent Deception Environment for Reinforcement Learning Research*
+### A Multi-Agent Deception Environment for Reinforcement Learning Research
 
-> *"**Pirates of the Caribbean** meets **Alice in Borderland** meets **Among Us**."*
+> "Pirates of the Caribbean meets Alice in Borderland meets Among Us."
 >
 > A death-game sandbox where AI agents must survive the island, each other, and the lies.
 
 <div align="center">
-  <a href="https://github.com/meta-pytorch/OpenEnv"><img src="https://github.com/user-attachments/assets/2700a971-e5d6-4036-b03f-2f89c9791609" width="35" height="35" alt="OpenEnv"></a>
-  <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="115" alt="Unsloth"></a>
-  <a href="https://pytorch.org/"><img src="https://pytorch.org/assets/images/pytorch-logo.png" width="150" alt="PyTorch"></a>
+  <img src="https://github.com/user-attachments/assets/2700a971-e5d6-4036-b03f-2f89c9791609" width="80" alt="OpenEnv Logo"/>
 </div>
 
 <div align="center">
@@ -23,9 +21,11 @@
 
 ---
 
-## Built with OpenEnv
+## <img src="https://github.com/user-attachments/assets/2700a971-e5d6-4036-b03f-2f89c9791609" width="30" alt="OpenEnv"/> OpenEnv: Agentic Execution Environments
 
-We're using the new [OpenEnv](https://github.com/meta-pytorch/OpenEnv) library which provides 2000+ environments for RL research!
+We're using the new [OpenEnv](https://github.com/meta-pytorch/OpenEnv) library which has over 2000+ environments for RL!
+
+To run this, press "**Runtime**" and press "**Run all**" on a **free** Tesla T4 Google Colab instance!
 
 <div align="center">
   <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="115"></a>
@@ -33,7 +33,7 @@ We're using the new [OpenEnv](https://github.com/meta-pytorch/OpenEnv) library w
   <a href="https://docs.unsloth.ai/"><img src="https://github.com/unslothai/unsloth/blob/main/images/documentation%20green%20button.png?raw=true" width="125"></a></a> Join Discord if you need help + ⭐ <i>Star us on <a href="https://github.com/unslothai/unsloth">Github</a> </i> ⭐
 </div>
 
-To install Unsloth on your local device, follow [our guide](https://docs.unsloth.ai/get-started/install-and-update).
+To install Unsloth your local device, follow [our guide](https://docs.unsloth.ai/get-started/install-and-update).
 
 ---
 
