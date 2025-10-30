@@ -335,7 +335,7 @@ def broadcast_episode_end(episode_id: int, result_data: Dict[str, Any]):
     """Broadcast episode end to all subscribers"""
     room = f'episode_{episode_id}'
     socketio.emit('episode_end', result_data, room=room)
-
+ 
 # ===================================================================
 # ERROR HANDLERS
 # ===================================================================

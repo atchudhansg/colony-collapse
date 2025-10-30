@@ -171,3 +171,4 @@ class GameState:
             'terrain': self.terrain,
             'timestamp': self.timestamp
         }
+        

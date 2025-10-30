@@ -135,7 +135,7 @@ class MaroonedTrainingLogger:
             # Save to file storage if enabled
             if self.file_storage:
                 self.file_storage.save_episode(self.current_episode)
-      
+    
         # Finalize in database
         if self.current_episode_id:
             self.db.finalize_episode(

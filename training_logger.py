@@ -2,6 +2,7 @@
 Integration hook for training notebooks
 Import this in your training script to enable logging
 """
+
 import sys
 from pathlib import Path
 
