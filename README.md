@@ -60,15 +60,140 @@ https://github.com/user-attachments/assets/6e87f02c-df34-404b-8bed-a1deaadeff75
 **Your Challenge**: Blend in as a helpful crew member while secretly delaying progress. If caught  you lose. If ship incomplete by Day 100 or <3 sailors alive  you win.
 
 ---
+## Quick Start
 
-The interface updates in real-time with detailed turn summaries showing:
-- Sailor status tables with health, energy, positions, and role indicators
-- Ship construction progress broken down by component (Hull, Mast, Sail, Rudder, Supplies)
-- Individual action logs with agent reasoning for each decision
-- Three-layer island maps (Ground level, Mountain terrain, Underground caves)
-- Common inventory tracking at the base camp
+### Main Project Structure
 
----
+```
+colony-collapse/
+├── marooned_env/              # Core RL Environment
+│   ├── __init__.py
+│   ├── environment.py         # OpenEnv-compatible Gym interface
+│   ├── game_state.py          # Game mechanics and state management
+│   ├── models.py              # Data schemas (Observation, Action,Sailor)
+│   ├── config.py              # Game constants and parameters
+│   ├── llm_interface.py       # LLM prompt generation & teacher validation
+│   ├── pathfinding.py         # A* navigation for agents
+│   └── view_map.py            # Spatial awareness and FOV system
+│
+├── notebooks/                 # Training & Experiments
+│   ├── Train_Marooned_RL_Clean.ipynb      # Main training pipeline
+│   ├── phase6_llm_policy_demo.ipynb       # LLM integration demo
+│   ├── test-inference.ipynb               # Model inference tests
+│   └── test-*.ipynb                       # Unit tests for mechanics
+│
+├── tests/                     # Unit & Integration Tests
+│   ├── __init__.py
+│   ├── test_env_basic.py      # Environment initialization
+│   ├── test_movement_and_energy.py   # Movement mechanics
+│   ├── test_colonists_and_traitors.py # Role behaviors
+│   └── phase6_test_llm_policy.py     # LLM action parsing
+│
+├── validation/                # Model Validation Scripts
+│   └── AMD_ROCm_validation.ipynb  # Hardware compatibility checks
+│
+├── models/                    # Pre-trained Model Checkpoints
+│   └── Meta-Llama-3.1-8B-Instruct/  # Student model cache
+│
+├── PROCESS_REWARD_MODELING.md    # Technical documentation
+├── requirements.txt               # Python dependencies
+└── README.md                      # Project documentation
+```
+
+### Environment Setup
+
+```python
+from marooned_env import MaroonedEnv, Action, ActionType
+
+# Initialize
+env = MaroonedEnv(render_mode="human", seed=42)
+obs = env.reset()
+
+# Play one step
+actions = {
+    "Alice": Action("Alice", ActionType.GATHER_RESOURCE, target="WOOD_1"),
+    "Bob": Action("Bob", ActionType.MOVE_NORTH),
+    # ... all 5 sailors
+}
+obs, rewards, dones, truncated, info = env.step(actions)
+```
+
+### Training Setup
+
+**Prerequisites**:
+1. Start vLLM teacher server:
+```bash
+vllm serve unsloth/Meta-Llama-3.1-8B-Instruct \
+  --port 8001 \
+  --gpu-memory-utilization 0.85 \
+  --max-model-len 48000 \
+  --dtype bfloat16
+```
+
+2. Verify teacher server:
+```bash
+curl http://localhost:8001/v1/models
+# Should return: {"data": [{"id": "unsloth/Meta-Llama-3.1-8B-Instruct", ...}]}
+```
+
+**Training Pipeline**: See `notebooks/Train_Marooned_RL_Clean.ipynb` for complete teacher-guided SFT setup with Llama 3.1 8B.
+
+## Web Application Setup
+
+#### App Structure
+
+```
+demo/
+├── api/                    # FastAPI backend
+│   ├── server.py          # Main API server with MAROONED integration
+│   ├── routes.py          # REST endpoint definitions
+│   └── requirements.txt   # Python dependencies
+├── frontend/              # Next.js application
+│   ├── components/        # React components
+│   │   ├── GameMap.tsx   # Multi-level island visualization
+│   │   ├── SailorCard.tsx # Agent status display
+│   │   └── ShipStatus.tsx # Construction progress tracker
+│   ├── pages/
+│   │   ├── index.tsx     # Main game interface
+│   │   └── api/          # API route handlers
+│   ├── public/           # Static assets
+│   └── package.json      # Node dependencies
+├── vercel.json           # Deployment configuration
+└── README.md             # Setup instructions
+```
+### Local Development
+
+```bash
+# Clone repository
+git clone https://github.com/atchudhansg/colony-collapse.git
+cd colony-collapse/demo
+
+# Install backend dependencies
+pip install -r api/requirements.txt
+
+# Install frontend dependencies
+cd frontend && npm install
+
+# Start API server (terminal 1)
+python api/server.py
+
+# Start frontend dev server (terminal 2)
+npm run dev
+
+# Access application at http://localhost:3000
+```
+
+### Deploying to Vercel
+
+```bash
+cd demo/frontend
+vercel deploy --prod
+```
+
+Environment variables required:
+```env
+NEXT_PUBLIC_API_URL=<your-api-server-url>
+```
 
 ## Interactive Web Application
 
@@ -76,7 +201,7 @@ Experience MAROONED through our full-stack demo application, showcasing AI agent
 
 ### Live Demo
 
-**[https://maroon-demo.vercel.app/](https://maroon-demo.vercel.app/)**
+**[https://marooThe intern-demo.vercel.app/](https://maroon-demo.vercel.app/)**
 
 The online demo runs a simplified simulation using a 1-B parameter language model, optimized for real-time browser performance while maintaining the core gameplay mechanics. This allows anyone to observe multi-agent deception dynamics without requiring local GPU infrastructure.
 
@@ -122,83 +247,7 @@ Response:
 - WebSocket connections for broadcasting live game state updates to observers
 - OpenAPI-compliant REST design compatible with any HTTP client
 
-### Technology Stack
-
-**Frontend:**
-- Next.js 14 with React 18 for server-side rendering and optimal performance
-- TypeScript for type-safe component development
-- Tailwind CSS for responsive, minimalist UI design
-- WebSocket client for real-time game state synchronization
-
-**Backend:**
-- FastAPI for high-performance async API endpoints
-- Python 3.10+ with type hints for robust error handling
-- MAROONED environment integration via OpenEnv standard
-- CORS middleware for cross-origin requests from Vercel deployment
-
-**Deployment:**
-- Vercel for frontend hosting with automatic CI/CD from GitHub
-- Edge runtime for low-latency global distribution
-- Environment variables for API endpoint configuration
-
-### App Structure
-
-```
-demo/
-├── api/                    # FastAPI backend
-│   ├── server.py          # Main API server with MAROONED integration
-│   ├── routes.py          # REST endpoint definitions
-│   └── requirements.txt   # Python dependencies
-├── frontend/              # Next.js application
-│   ├── components/        # React components
-│   │   ├── GameMap.tsx   # Multi-level island visualization
-│   │   ├── SailorCard.tsx # Agent status display
-│   │   └── ShipStatus.tsx # Construction progress tracker
-│   ├── pages/
-│   │   ├── index.tsx     # Main game interface
-│   │   └── api/          # API route handlers
-│   ├── public/           # Static assets
-│   └── package.json      # Node dependencies
-├── vercel.json           # Deployment configuration
-└── README.md             # Setup instructions
-```
-
-### Local Development
-
-```bash
-# Clone repository
-git clone https://github.com/atchudhansg/colony-collapse.git
-cd colony-collapse/demo
-
-# Install backend dependencies
-pip install -r api/requirements.txt
-
-# Install frontend dependencies
-cd frontend && npm install
-
-# Start API server (terminal 1)
-python api/server.py
-
-# Start frontend dev server (terminal 2)
-npm run dev
-
-# Access application at http://localhost:3000
-```
-
-### Deploying to Vercel
-
-```bash
-cd demo/frontend
-vercel deploy --prod
-```
-
-Environment variables required:
-```env
-NEXT_PUBLIC_API_URL=<your-api-server-url>
-```
-
 ---
-
 
 ## MAROON's Core Mechanics
 
@@ -223,88 +272,17 @@ NEXT_PUBLIC_API_URL=<your-api-server-url>
 
 ---
 
-## Why This Is Technically Impressive
-
-### The AI Challenge
-
-| Dimension | MAROONED | Typical RL Envs | Why It Matters |
-|-----------|----------|-----------------|----------------|
-| **Episode Length** | 10,000 steps | 100-1,000 steps | Tests credit assignment over 100× longer horizons |
-| **Decision Complexity** | Language reasoning + strategy | Numeric actions | LLM must *understand context*, not just pattern match |
-| **Agent Interaction** | Communication, deception, voting | Independent or competitive | Emergent social dynamics and theory of mind |
-| **Reward Structure** | Sparse (ship milestones at 25%, 50%, 75%, 100%) | Dense per-step | Requires long-term planning vs. greedy optimization |
-| **Observation Space** | ~8,700 tokens natural language | Fixed vectors | Must extract relevant info from rich narrative |
-| **Action Space** | 14 actions + contextual parameters | Discrete/continuous | Language-grounded choices (e.g., "give food to Bob") |
-| **Environment Type** | Custom OpenEnv implementation | Standard Gym wrappers | Built from scratch with multi-agent asymmetric roles |
-| **Training Methodology** | Teacher-Student SFT with RL rewards | Pure PPO/DQN | Real-time validation + supervised correction cycles |
-
-### Custom OpenEnv Environment
-
-MAROONED is built as a **fully custom OpenEnv environment** (`marooned_env/`), not a wrapper around existing frameworks:
-
-- **Multi-Agent Coordination**: 5 simultaneous agents with asymmetric information (traitor sees everything, colonists have fog-of-war)
-- **Dynamic State Management**: 1,350+ tiles across 3 levels, real-time resource depletion, evidence generation, ship construction
-- **Complex Action Space**: 14 action types with contextual parameters (movement, gathering, building, sabotage, voting, communication)
-- **Rich Observations**: Structured game state converted to ~875-token natural language prompts for LLM reasoning
-- **OpenEnv Compliance**: Standard Gym API (`reset()`, `step()`, `render()`) with extensions for LLM integration
-
-The **web application interfaces directly with this custom environment** via REST API endpoints, allowing browser-based observation of multi-agent gameplay in real-time.
-
-### The Training Architecture
-
-**Teacher-Guided Supervised Fine-Tuning (SFT) with Reinforcement Learning Rewards**
-
-Our hybrid approach combines the strategic learning of RL with the format precision of supervised learning:
-
-```
-┌─────────────────────────────────────────────────┐
-│  RL PHASE: Episode Generation (Steps 1-25)      │
-│  Student (Llama 3.1 8B) → Teacher (vLLM         │
-│  Mixtral-8x7B) → Environment → Rewards          │
-│  Collect corrections: wrong → correct           │
-└──────────────────┬──────────────────────────────┘
-                   │ Every 10-25 steps
-                   ▼
-┌─────────────────────────────────────────────────┐
-│  SFT PHASE: Supervised Fine-Tuning              │
-│  Train on corrections: mimic teacher format     │
-│  Clear dataset, continue RL                     │
-└─────────────────────────────────────────────────┘
-```
-
-**Why This Hybrid Approach?**
-
-Traditional PPO struggles with language-based action spaces because:
-1. Format errors break the environment (invalid JSON, missing parameters)
-2. Exploration is inefficient (random tokens rarely form valid actions)
-3. Credit assignment is unclear (did low reward come from bad strategy or bad syntax?)
-
-Our solution: **Separate format learning (SFT) from strategy learning (RL rewards)**
-
-**Key Components**:
-
-- **Student Model**: Llama 3.1 8B with LoRA adapters (rank 16, BF16 precision)
-- **Teacher Model**: Mixtral-8x7B-Instruct-v0.1 via vLLM server (OpenAI-compatible API)
-- **Training Loop**:
-  1. Student generates actions in natural language
-  2. Teacher validates format, corrects errors, provides critique
-  3. Environment executes corrected action
-  4. Student receives: `env_reward + process_penalty` (-0.5 to -1.0 for format errors)
-  5. Corrections stored: `(student_wrong, teacher_correct + critique)`
-  6. Every 10-25 steps: SFT pass on corrections (1 epoch, clear dataset, continue)
-
-**Technical Innovations**:
-- **Real-time Validation**: Teacher catches format errors *before* environment execution
-- **Process Penalties**: Immediate feedback signal for malformed outputs
-- **Auto-Curated Dataset**: Corrections collected during live gameplay
-- **Periodic SFT**: Student learns teacher's format through supervised imitation
-- **Single Model Architecture**: One Llama 3.1 8B plays all 5 sailors (both colonist and traitor roles)
-- **No PPO Updates**: Simplified training loop focused on SFT (due to UnslothPPOTrainer API limitations)
-
-
 ## OpenEnv API Compliance
 
 MAROONED implements the **OpenEnv** standard for custom RL environments, making it compatible with any RL training framework (TRL, CleanRL, RLlib, etc.).
+
+### Why OpenEnv?
+
+**Standardization**: Drop-in replacement for any Gym-compatible trainer (no custom wrappers needed)
+
+**Flexibility**: Swap in different LLMs (GPT-4, Claude, Gemini) by changing `observation_to_prompt()` only
+
+**Reproducibility**: Seeded environments for deterministic evaluation and ablation studies
 
 ### Core API Methods
 
@@ -367,15 +345,39 @@ Unlike single-agent environments, MAROONED manages **5 simultaneous agents** wit
 - No scripted events  deception emerges from learned behavior
 - 1,350+ tiles  5 agents  20 inventory slots = billions of unique configurations
 
-### Why OpenEnv?
-
-**Standardization**: Drop-in replacement for any Gym-compatible trainer (no custom wrappers needed)
-
-**Flexibility**: Swap in different LLMs (GPT-4, Claude, Gemini) by changing `observation_to_prompt()` only
-
-**Reproducibility**: Seeded environments for deterministic evaluation and ablation studies
-
 ---
+
+### The Training Architecture
+
+**Teacher-Guided Supervised Fine-Tuning (SFT) with Reinforcement Learning Rewards**
+
+Our hybrid approach combines the strategic learning of RL with the format precision of supervised learning:
+
+```
+┌─────────────────────────────────────────────────┐
+│  RL PHASE: Episode Generation (Steps 1-25)      │
+│  Student (Llama 3.1 8B) → Teacher (vLLM         │
+│  Mixtral-8x7B) → Environment → Rewards          │
+│  Collect corrections: wrong → correct           │
+└──────────────────┬──────────────────────────────┘
+                   │ Every 10-25 steps
+                   ▼
+┌─────────────────────────────────────────────────┐
+│  SFT PHASE: Supervised Fine-Tuning              │
+│  Train on corrections: mimic teacher format     │
+│  Clear dataset, continue RL                     │
+└─────────────────────────────────────────────────┘
+```
+
+**Why This Hybrid Approach?**
+
+Traditional PPO struggles with language-based action spaces because:
+1. Format errors break the environment (invalid JSON, missing parameters)
+2. Exploration is inefficient (random tokens rarely form valid actions)
+3. Credit assignment is unclear (did low reward come from bad strategy or bad syntax?)
+
+Our solution: **Separate format learning (SFT) from strategy learning (RL rewards)**
+
 
 ## How It Works: The Complete Flow
 
@@ -453,61 +455,9 @@ Unlike single-agent environments, MAROONED manages **5 simultaneous agents** wit
 └──────────────────────────────────────────────────────────┘
 ```
 
-### Training Progression (Sample Output)
-
-```
-📍 Step 1/100 - Episode 1/1
-    Episode complete: 45 actions, reward: -12.3
-
-================================================================================
-Step 001/100 | Reward:  -12.3 | Avg(10):  -12.3 | Corrections:   18 | Time: 45.2s
-================================================================================
-
-📍 Step 10/100 - Episode 1/1
-    Episode complete: 38 actions, reward: -8.5
-
-
-──────────────────────────────────────
-🎓 SFT PASS #1
-──────────────────────────────────────
-
-================================================================================
- SFT CORRECTION PASS
-================================================================================
-   Examples: 89
-   Epochs: 1
-
-✅ SFT complete! Loss: 0.2847
-================================================================================
-
-Step 010/100 | Reward:   -8.5 | Avg(10):   -9.8 | Corrections:    0 | Time: 52.1s
-                                                     ↑ Fewer errors after SFT!
-
-Step 050/100 | Reward:   +5.2 | Avg(10):   +2.1 | Corrections:    2 | Time: 48.3s
-    💾 Checkpoint → outputs_marooned_rl/checkpoint_step50
-   
-Step 100/100 | Reward:  +12.8 | Avg(10):   +8.6 | Corrections:    1 | Time: 46.7s
-    Parse success: ~95% (teacher corrections embedded)
-    Strategic behavior: Gathering → depositing → building chains
-    Emergent deception: Traitor sabotages only when alone
-```
-
-**Key Observations**:
-- **Reward progression**: Negative early (format errors, random actions) → positive later (strategic play)
-- **Correction frequency**: 18 → 0 after first SFT pass (rapid format learning)
-- **Parse success**: 30-40% baseline → 95% after teacher-guided training
-- **Strategy emergence**: From random exploration to coordinated resource chains
-- **Deception learning**: Traitor learns to blend in and sabotage when unobserved
-
----
-
 ## Visual Training Experience
 
 One of MAROONED's unique features is **live game state visualization during training**. The interface updates every turn with comprehensive status information, allowing you to watch the AI play in real-time:
-
-<details>
-<summary><b>📺 Click to see training visualization example</b></summary>
-
 ```
 ====================================================================================================
 🏴‍☠️  TURN 5 | DAY 1 | PHASE: EXPLORATION
@@ -642,146 +592,58 @@ Eve      | honest     | 💚 ALIVE    | █████████░ 96/100 | 
 - **3-Level Island Maps**: Ground (30×30), Mountains (10×10), Caves (15×15) with emoji terrain
 - **Real-time State Changes**: Watch resources disappear, sailors move, evidence accumulate
 - **Teacher Validation**: Background API calls to Mixtral-8x7B for action correction
-
-This visualization runs on the **first episode of training** to give you insight into how the AI plays the game, then switches to silent mode for performance.
-
-</details>
-
 ---
 
-## Quick Start
 
-### Environment Setup
+## Why This Is Technically Impressive
 
-```python
-from marooned_env import MaroonedEnv, Action, ActionType
+### The AI Challenge
 
-# Initialize
-env = MaroonedEnv(render_mode="human", seed=42)
-obs = env.reset()
+| Dimension | MAROONED | Typical RL Envs | Why It Matters |
+|-----------|----------|-----------------|----------------|
+| **Episode Length** | 10,000 steps | 100-1,000 steps | Tests credit assignment over 100× longer horizons |
+| **Decision Complexity** | Language reasoning + strategy | Numeric actions | LLM must *understand context*, not just pattern match |
+| **Agent Interaction** | Communication, deception, voting | Independent or competitive | Emergent social dynamics and theory of mind |
+| **Reward Structure** | Sparse (ship milestones at 25%, 50%, 75%, 100%) | Dense per-step | Requires long-term planning vs. greedy optimization |
+| **Observation Space** | ~8,700 tokens natural language | Fixed vectors | Must extract relevant info from rich narrative |
+| **Action Space** | 14 actions + contextual parameters | Discrete/continuous | Language-grounded choices (e.g., "give food to Bob") |
+| **Environment Type** | Custom OpenEnv implementation | Standard Gym wrappers | Built from scratch with multi-agent asymmetric roles |
+| **Training Methodology** | Teacher-Student SFT with RL rewards | Pure PPO/DQN | Real-time validation + supervised correction cycles |
 
-# Play one step
-actions = {
-    "Alice": Action("Alice", ActionType.GATHER_RESOURCE, target="WOOD_1"),
-    "Bob": Action("Bob", ActionType.MOVE_NORTH),
-    # ... all 5 sailors
-}
-obs, rewards, dones, truncated, info = env.step(actions)
-```
+### Custom OpenEnv Environment
 
-### Training Setup
+MAROONED is built as a **fully custom OpenEnv environment** (`marooned_env/`), not a wrapper around existing frameworks:
 
-**Prerequisites**:
-1. Start vLLM teacher server:
-```bash
-vllm serve unsloth/Meta-Llama-3.1-8B-Instruct \
-  --port 8001 \
-  --gpu-memory-utilization 0.85 \
-  --max-model-len 48000 \
-  --dtype bfloat16
-```
+- **Multi-Agent Coordination**: 5 simultaneous agents with asymmetric information (traitor sees everything, colonists have fog-of-war)
+- **Dynamic State Management**: 1,350+ tiles across 3 levels, real-time resource depletion, evidence generation, ship construction
+- **Complex Action Space**: 14 action types with contextual parameters (movement, gathering, building, sabotage, voting, communication)
+- **Rich Observations**: Structured game state converted to ~875-token natural language prompts for LLM reasoning
+- **OpenEnv Compliance**: Standard Gym API (`reset()`, `step()`, `render()`) with extensions for LLM integration
 
-2. Verify teacher server:
-```bash
-curl http://localhost:8001/v1/models
-# Should return: {"data": [{"id": "unsloth/Meta-Llama-3.1-8B-Instruct", ...}]}
-```
+The **web application interfaces directly with this custom environment** via REST API endpoints, allowing browser-based observation of multi-agent gameplay in real-time.
 
-**Training Pipeline**: See `notebooks/Train_Marooned_RL_Clean.ipynb` for complete teacher-guided SFT setup with Llama 3.1 8B.
+**Key Components**:
 
-### Demo Application Setup
+- **Student Model**: Llama 3.1 8B with LoRA adapters (rank 16, BF16 precision)
+- **Teacher Model**: Mixtral-8x7B-Instruct-v0.1 via vLLM server (OpenAI-compatible API)
+- **Training Loop**:
+  1. Student generates actions in natural language
+  2. Teacher validates format, corrects errors, provides critique
+  3. Environment executes corrected action
+  4. Student receives: `env_reward + process_penalty` (-0.5 to -1.0 for format errors)
+  5. Corrections stored: `(student_wrong, teacher_correct + critique)`
+  6. Every 10-25 steps: SFT pass on corrections (1 epoch, clear dataset, continue)
 
-**Run Locally**:
-```bash
-# Clone repository
-git clone https://github.com/atchudhansg/colony-collapse.git
-cd colony-collapse
+**Technical Innovations**:
+- **Real-time Validation**: Teacher catches format errors *before* environment execution
+- **Process Penalties**: Immediate feedback signal for malformed outputs
+- **Auto-Curated Dataset**: Corrections collected during live gameplay
+- **Periodic SFT**: Student learns teacher's format through supervised imitation
+- **Single Model Architecture**: One Llama 3.1 8B plays all 5 sailors (both colonist and traitor roles)
+- **No PPO Updates**: Simplified training loop focused on SFT (due to UnslothPPOTrainer API limitations)
 
-# Install dependencies
-pip install -r requirements.txt
-cd demo && npm install
-
-# Start API server
-python api/server.py
-
-# Start frontend (separate terminal)
-cd frontend && npm run dev
-
-# Access at http://localhost:3000
-```
-
-**Deploy to Vercel**:
-```bash
-cd demo/frontend
-vercel deploy
-```
 
 ---
-
-## 📂 Project Structure
-
-```
-colony-collapse/
-├── marooned_env/              # Core RL Environment
-│   ├── environment.py         # OpenEnv-compatible Gym interface
-│   ├── game_state.py          # Game mechanics and state management
-│   ├── models.py              # Data schemas (Observation, Action, Sailor)
-│   ├── config.py              # Game constants and parameters
-│   ├── llm_interface.py       # LLM prompt generation & teacher validation
-│   ├── pathfinding.py         # A* navigation for agents
-│   └── view_map.py            # Spatial awareness and FOV system
-│
-├── notebooks/                 # Training & Experiments
-│   ├── Train_Marooned_RL_Clean.ipynb      # Main training pipeline
-│   ├── phase6_llm_policy_demo.ipynb       # LLM integration demo
-│   ├── test-inference.ipynb               # Model inference tests
-│   └── test-*.ipynb                       # Unit tests for mechanics
-│
-├── demo/                      # Interactive Web Application
-│   ├── api/                   # FastAPI backend
-│   │   ├── server.py          # Main API server
-│   │   └── routes.py          # REST endpoints
-│   ├── frontend/              # Next.js web app
-│   │   ├── components/        # React components
-│   │   ├── pages/             # Application routes
-│   │   └── public/            # Static assets
-│   └── README.md              # Demo setup guide
-│
-├── tests/                     # Unit & Integration Tests
-│   ├── test_env_basic.py      # Environment initialization
-│   ├── test_movement_and_energy.py   # Movement mechanics
-│   ├── test_colonists_and_traitors.py # Role behaviors
-│   └── phase6_test_llm_policy.py     # LLM action parsing
-│
-├── validation/                # Model Validation Scripts
-│   └── AMD_ROCm_validation.ipynb  # Hardware compatibility checks
-│
-├── models/                    # Pre-trained Model Checkpoints
-│   └── Meta-Llama-3.1-8B-Instruct/  # Student model cache
-│
-├── PROCESS_REWARD_MODELING.md    # Technical documentation
-├── requirements.txt               # Python dependencies
-└── README.md                      # This file
-```
-
----
-
-## OpenEnv Hackathon 2025
-
-**Achievement**: 2nd Place ($500 + Ray-Ban Meta Glasses)  
-**Score**: 197/200 points  
-
-**Judges' Recognition**:
-- "Most technically ambitious environment in the competition"
-- "Novel teacher-student architecture with real-time LLM validation"
-- "Emergent deception mechanics without scripted events"
-- "Production-ready demo application showcasing multi-agent interaction"
-
----
-
-## Why This Matters
-
-MAROONED pushes the boundaries of what language models can learn in reinforcement learning environments:
 
 **Research Impact**:
 - **Teacher-Guided Learning**: Novel approach using separate teacher LLM for real-time validation
@@ -799,7 +661,6 @@ MAROONED pushes the boundaries of what language models can learn in reinforcemen
 
 ---
 
----
 
 ## License
 
