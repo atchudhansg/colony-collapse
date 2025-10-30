@@ -17,7 +17,7 @@ from config import ActionType, ResourceType, ShipComponent, MapLevel
 
 # vLLM Teacher API Configuration (OpenAI-compatible)
 VLLM_API_URL = "http://localhost:8000/v1/chat/completions"
-TEACHER_MODEL_NAME = "mistralai/Mixtral-8x7B-Instruct-v0.1"
+TEACHER_MODEL_NAME = "mistralai/Mixtral-8x7B-Instruct-v0.1"  # Currently running vLLM server
 
 
 # ============================================================================
@@ -946,11 +946,16 @@ SPECIAL:
     - Alerts all sailors to your location
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-YOUR RESPONSE (use the exact format shown in system prompt):
+YOUR RESPONSE - Use this EXACT format:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-REASONING: <explain your thinking>
-ACTION: <your action command>
+You MUST respond with exactly TWO lines:
+Line 1: REASONING: [Your strategic thinking here]
+Line 2: ACTION: [Your chosen command from the list above]
+
+Example:
+REASONING: Wood pile WOOD_003 is adjacent at position (16,16). Gathering it will help build the hull which requires 50 wood total.
+ACTION: GATHER WOOD_003
 """
     
     return base_text + "\n" + action_instructions
@@ -1060,13 +1065,12 @@ GAME STATE:
 {condensed_observation}"""
 
     # Query vLLM teacher API (OpenAI-compatible endpoint)
-    # Note: Mixtral uses Instruct format, combine system + user into single user message
-    combined_prompt = f"{TEACHER_SYSTEM_PROMPT}\n\n{user_prompt}"
-    
+    # Mistral-7B-Instruct-v0.3 supports system role properly via vLLM
     payload = {
         "model": TEACHER_MODEL_NAME,
         "messages": [
-            {"role": "user", "content": combined_prompt}
+            {"role": "system", "content": TEACHER_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
         ],
         "temperature": 0.1,
         "top_p": 1.0,

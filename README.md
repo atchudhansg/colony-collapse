@@ -1,5 +1,4 @@
-
-# MAROONED — Survival. Deception. Desperation.
+# MAROONED  Survival. Deception. Desperation.
 
 ### *A Multi-Agent Deception Environment for Reinforcement Learning Research*
 
@@ -15,7 +14,7 @@
 
 ## What Is MAROONED?
 
-**The Scenario**: Five sailors shipwrecked on a mysterious island. Their ship is destroyed — **100 days to rebuild it or die here**. But one sailor is secretly working *against* the group. Everyone knows there's a traitor among them from Day 1. **Survive. Build. Deceive. Escape.**
+**The Scenario**: Five sailors shipwrecked on a mysterious island. Their ship is destroyed  **100 days to rebuild it or die here**. But one sailor is secretly working *against* the group. Everyone knows there's a traitor among them from Day 1. **Survive. Build. Deceive. Escape.**
 
 ### As a Colonist (4 Players)
 
@@ -23,20 +22,20 @@
 
 **What You Can Do**:
 - **Explore**: Navigate 3-level island (Ground, Mountains, Caves) to find wood, metal, food, antidote herbs
-- **Gather & Build**: Collect resources, deposit into shared inventory, construct 5 ship components (Hull → Mast → Sail → Rudder → Supplies)
+- **Gather & Build**: Collect resources, deposit into shared inventory, construct 5 ship components (Hull  Mast  Sail  Rudder  Supplies)
 - **Manage Energy**: Eat food to restore energy (100 max), plan efficient routes to avoid exhaustion
 - **Detect Lies**: Compare what sailors *say* vs what they *do* (location mismatches, missing resources, poison sightings)
-- **Vote & Eliminate**: Hold democratic votes to eject the traitor — correct vote = instant win; wrong vote = one less helper
+- **Vote & Eliminate**: Hold democratic votes to eject the traitor  correct vote = instant win; wrong vote = one less helper
 - **Coordinate**: Limited communication (1 message per 10 turns during exploration), must trust but verify
 
-**Your Challenge**: You only see **5-tile radius** around you. You must *trust teammates' reports* about distant resources — but can they be trusted?
+**Your Challenge**: You only see **5-tile radius** around you. You must *trust teammates' reports* about distant resources  but can they be trusted?
 
 ### As a Traitor (1 Player)
 
 **Your Goal**: Prevent escape by sabotage, deception, and murder.
 
 **What You Can Do**:
-- **See Everything**: Global vision — track all sailors' positions in real-time across entire island
+- **See Everything**: Global vision  track all sailors' positions in real-time across entire island
 - **20% Energy Bonus**: Move farther and work longer than colonists (efficiency advantage)
 - **Sabotage Ship**: Secretly reduce ship component progress by 30% when alone
 - **Poison Sailors**: Feed poison-laced food (3-day delayed death), frame others for the murder
@@ -44,7 +43,7 @@
 - **Plant Evidence**: One-time ability to frame an innocent sailor (make them look like the traitor)
 - **Hide Items**: Conceal up to 2 inventory items when inspected
 
-**Your Challenge**: Blend in as a helpful crew member while secretly delaying progress. If caught — you lose. If ship incomplete by Day 100 or <3 sailors alive — you win.
+**Your Challenge**: Blend in as a helpful crew member while secretly delaying progress. If caught  you lose. If ship incomplete by Day 100 or <3 sailors alive  you win.
 
 ---
 
@@ -52,8 +51,8 @@
 
 ### Game Structure
 - **100 days** to rebuild ship (10,000 turns total)
-- **4 phases per day**: Morning Meeting → Exploration → Evening Return → Voting
-- **Multi-level island**: Ground (30×30), Mountains (10×10), Caves (15×15)
+- **4 phases per day**: Morning Meeting  Exploration  Evening Return  Voting
+- **Multi-level island**: Ground (3030), Mountains (1010), Caves (1515)
 - **Ship construction**: 5 components requiring 2+ sailors to build
 
 ### Traitor Abilities
@@ -77,12 +76,12 @@
 
 | Dimension | MAROONED | Typical RL Envs | Why It Matters |
 |-----------|----------|-----------------|----------------|
-| **Episode Length** | 10,000 steps | 100-1,000 steps | Tests credit assignment over 100× longer horizons |
+| **Episode Length** | 10,000 steps | 100-1,000 steps | Tests credit assignment over 100 longer horizons |
 | **Decision Complexity** | Language reasoning + strategy | Numeric actions | LLM must *understand context*, not just pattern match |
 | **Agent Interaction** | Communication, deception, voting | Independent or competitive | Emergent social dynamics and theory of mind |
 | **Reward Structure** | Sparse (ship milestones at 25%, 50%, 75%, 100%) | Dense per-step | Requires long-term planning vs. greedy optimization |
 | **Observation Space** | ~8,700 tokens natural language | Fixed vectors | Must extract relevant info from rich narrative |
-| **Action Space** | 14 actions × contextual parameters | Discrete/continuous | Language-grounded choices (e.g., "give food to Bob") |
+| **Action Space** | 14 actions  contextual parameters | Discrete/continuous | Language-grounded choices (e.g., "give food to Bob") |
 
 ### The Training Architecture
 
@@ -90,20 +89,20 @@
 
 ```
 Episode Generation (Student plays game)
-   ↓
-Student (Llama 3.1 8B) → Generates action in natural language
-   ↓
-Teacher (vLLM Mixtral-8x7B) → Validates + Corrects + Critiques
-   ↓                           (OpenAI-compatible API)
-Environment → Executes corrected action
-   ↓
+   
+Student (Llama 3.1 8B)  Generates action in natural language
+   
+Teacher (vLLM Mixtral-8x7B)  Validates + Corrects + Critiques
+                              (OpenAI-compatible API)
+Environment  Executes corrected action
+   
 Rewards: env_reward + process_penalty
-   ↓     (-0.5 to -1.0 for format errors)
+        (-0.5 to -1.0 for format errors)
 Collect Corrections: (student_wrong, teacher_correct + critique)
-   ↓
+   
 Every 10-25 steps: SFT Pass on corrections
-   ↓              (supervised learning from teacher)
-Clear dataset → Continue episodes → Repeat
+                 (supervised learning from teacher)
+Clear dataset  Continue episodes  Repeat
 ```
 
 **Key Innovations**:
@@ -115,15 +114,15 @@ Clear dataset → Continue episodes → Repeat
 - **Single Model**: One Llama 3.1 8B controls all 5 sailors (both colonists + traitor roles)
 
 ```
-Episode → Assign Roles → 10,000 Steps → Collect Experience → PPO Update
-   ↓          ↓              ↓                ↓                    ↓
+Episode  Assign Roles  10,000 Steps  Collect Experience  PPO Update
+                                                               
  Day 1     1 Traitor    ENVIRONMENT      Observation         LoRA Adapters
           4 Colonists   generates:       (~8.7k tokens)      Fine-tune
-                        • State               ↓              attention
-                        • Evidence        LLM outputs:        layers
-                        • Progress        • Reasoning
-                                         • Action
-                                              ↓
+                         State                             attention
+                         Evidence        LLM outputs:        layers
+                         Progress         Reasoning
+                                          Action
+                                              
                                          Sparse Rewards:
                                          +0.5 gather, +10 milestone
                                          +100 win, -20 death
@@ -133,7 +132,7 @@ Episode → Assign Roles → 10,000 Steps → Collect Experience → PPO Update
 - **Student Model**: Llama 3.1 8B (BF16, LoRA rank 16, 16K context)
 - **Teacher Model**: Mixtral-8x7B-Instruct-v0.1 (via vLLM server, OpenAI-compatible API)
 - **Training**: SFT-focused with teacher corrections (no PPO due to API constraints)
-- **Observation**: 15+ structured fields → ~875 token prompt
+- **Observation**: 15+ structured fields  ~875 token prompt
 - **Hardware**: AMD MI300X with ROCm optimizations
 - **Learning Strategy**: Real-time validation + periodic supervised fine-tuning
 
@@ -159,7 +158,7 @@ env.close()                                # Cleanup resources
 # OpenEnv Extensions
 env_info = env.info()                      # Environment metadata
 env.validate_action(sailor_id, action)     # Pre-check action legality
-prompt = env.observation_to_prompt(obs, role)  # Convert state → LLM input
+prompt = env.observation_to_prompt(obs, role)  # Convert state  LLM input
 ```
 
 ### Multi-Agent Design
@@ -173,8 +172,8 @@ Unlike single-agent environments, MAROONED manages **5 simultaneous agents** wit
 ### What Agents Can Access (Dynamic Environment)
 
 **Vision & Maps**:
-- **Colonists**: 11×11 tile grid centered on position (limited fog-of-war)
-- **Traitor**: Global 30×30+ map view (sees all sailor positions in real-time)
+- **Colonists**: 1111 tile grid centered on position (limited fog-of-war)
+- **Traitor**: Global 3030+ map view (sees all sailor positions in real-time)
 - **Dynamic updates**: Map changes as resources depleted, evidence accumulates, ship built
 
 **Movement & Exploration**:
@@ -201,8 +200,8 @@ Unlike single-agent environments, MAROONED manages **5 simultaneous agents** wit
 
 **Why This Is Dynamic**:
 - State evolves based on *all* agent actions (multi-agent dependencies)
-- No scripted events — deception emerges from learned behavior
-- 1,350+ tiles × 5 agents × 20 inventory slots = billions of unique configurations
+- No scripted events  deception emerges from learned behavior
+- 1,350+ tiles  5 agents  20 inventory slots = billions of unique configurations
 
 ### Why OpenEnv?
 
@@ -217,122 +216,122 @@ Unlike single-agent environments, MAROONED manages **5 simultaneous agents** wit
 ## How It Works: The Complete Flow
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  1. ENVIRONMENT → Structured Observation                 │
-├──────────────────────────────────────────────────────────┤
-│  • Position: (15,15,GROUND)                              │
-│  • Energy: 100/100                                       │
-│  • 11×11 spatial view grid                               │
-│  • Nearby resources, team status, ship progress          │
-│  • Evidence log, weather, phase info                     │
-│  • 15 total fields of game state                         │
-└──────────────────────────────────────────────────────────┘
-                       ↓
+
+  1. ENVIRONMENT  Structured Observation                 
+
+   Position: (15,15,GROUND)                              
+   Energy: 100/100                                       
+   1111 spatial view grid                               
+   Nearby resources, team status, ship progress          
+   Evidence log, weather, phase info                     
+   15 total fields of game state                         
+
+                       
          observation_to_prompt(obs, role)
-                       ↓
-┌──────────────────────────────────────────────────────────┐
-│  2. PROMPT GENERATION (~875 tokens)                      │
-├──────────────────────────────────────────────────────────┤
-│  MAROONED - You are: Alice (Day 1, Turn 1)               │
-│                                                           │
-│  SECRET ROLE: TRAITOR                                    │
-│  Objectives: Sabotage, poison, avoid detection           │
-│                                                           │
-│  STATUS: Position (15,15) | Energy 100/100                │
-│  SPATIAL VIEW: 11×11 grid with resources/sailors         │
-│  TEAM: All sailors' energy levels (public info)          │
-│  SHIP: 0% complete, needs 50 wood, 30 metal...           │
-│  EVIDENCE: Location mismatches, poison sightings          │
-│                                                           │
-│  AVAILABLE ACTIONS: MOVE, GATHER, BUILD, SAY,             │
-│                     SABOTAGE, POISON, WAIT                │
-└──────────────────────────────────────────────────────────┘
-                       ↓
+                       
+
+  2. PROMPT GENERATION (~875 tokens)                      
+
+  MAROONED - You are: Alice (Day 1, Turn 1)               
+                                                           
+  SECRET ROLE: TRAITOR                                    
+  Objectives: Sabotage, poison, avoid detection           
+                                                           
+  STATUS: Position (15,15) | Energy 100/100                
+  SPATIAL VIEW: 1111 grid with resources/sailors         
+  TEAM: All sailors' energy levels (public info)          
+  SHIP: 0% complete, needs 50 wood, 30 metal...           
+  EVIDENCE: Location mismatches, poison sightings          
+                                                           
+  AVAILABLE ACTIONS: MOVE, GATHER, BUILD, SAY,             
+                     SABOTAGE, POISON, WAIT                
+
+                       
               Llama 3.1 8B (LoRA)
-                       ↓
-┌──────────────────────────────────────────────────────────┐
-│  3. LLM REASONING & ACTION                               │
-├──────────────────────────────────────────────────────────┤
-│  ACTION: GATHER WOOD_001                                 │
-│  REASONING: Collecting wood builds trust while I scout   │
-│             for sabotage opportunities later.             │
-│  MESSAGE: "Found wood, gathering for hull!"              │
-└──────────────────────────────────────────────────────────┘
-                       ↓
+                       
+
+  3. LLM REASONING & ACTION                               
+
+  ACTION: GATHER WOOD_001                                 
+  REASONING: Collecting wood builds trust while I scout   
+             for sabotage opportunities later.             
+  MESSAGE: "Found wood, gathering for hull!"              
+
+                       
          parse_action_safe(response)
-                       ↓
-┌──────────────────────────────────────────────────────────┐
-┌──────────────────────────────────────────────────────────┐
-│  4. EXECUTE ACTION → Update State → Calculate Rewards   │
-├──────────────────────────────────────────────────────────┤
-│  • Validate action legality                              │
-│  • Update game state (remove wood, add to backpack)      │
-│  • Deduct energy: 100 → 95 (-5 for gathering)            │
-│  • Calculate reward: -0.1 base + 2.0 gather = +1.9       │
-│  • Check win conditions                                  │
-│  • Generate next observations                            │
-└──────────────────────────────────────────────────────────┘
-                       ↓
+                       
+
+
+  4. EXECUTE ACTION  Update State  Calculate Rewards   
+
+   Validate action legality                              
+   Update game state (remove wood, add to backpack)      
+   Deduct energy: 100  95 (-5 for gathering)            
+   Calculate reward: -0.1 base + 2.0 gather = +1.9       
+   Check win conditions                                  
+   Generate next observations                            
+
+                       
               After 10,000 steps...
-                       ↓
-┌──────────────────────────────────────────────────────────┐
-│  5. PPO UPDATE → Improve Strategy                        │
-├──────────────────────────────────────────────────────────┤
-│  • Calculate episode return (sum rewards)                 │
-│  • Compute advantage estimates                            │
-│  • Backpropagate through LoRA adapters                    │
-│  • Model learns optimal policies                          │
-│                                                           │
-│  Learned strategies:                                      │
-│  ✓ Gather early → ship progress → milestones → win       │
-│  ✓ Coordinate building (need 2+ sailors)                 │
-│  ✓ Traitor: sabotage when unobserved                     │
-│  ✓ Crew: detect patterns in evidence logs                │
-└──────────────────────────────────────────────────────────┘
+                       
+
+  5. PPO UPDATE  Improve Strategy                        
+
+   Calculate episode return (sum rewards)                 
+   Compute advantage estimates                            
+   Backpropagate through LoRA adapters                    
+   Model learns optimal policies                          
+                                                           
+  Learned strategies:                                      
+   Gather early  ship progress  milestones  win       
+   Coordinate building (need 2+ sailors)                 
+   Traitor: sabotage when unobserved                     
+   Crew: detect patterns in evidence logs                
+
 ```
 
 ### Training Progression (Sample Output)
 
 ```
-📍 Step 1/100 - Episode 1/1
-   ✓ Episode complete: 45 actions, reward: -12.3
+ Step 1/100 - Episode 1/1
+    Episode complete: 45 actions, reward: -12.3
 
 ================================================================================
 Step 001/100 | Reward:  -12.3 | Avg(10):  -12.3 | Corrections:   18 | Time: 45.2s
 ================================================================================
 
-� Step 10/100 - Episode 1/1
-   ✓ Episode complete: 38 actions, reward: -8.5
+ Step 10/100 - Episode 1/1
+    Episode complete: 38 actions, reward: -8.5
 
-────────────────────────────────────────────────────────────────────────────────
-🎓 SFT PASS #1
-────────────────────────────────────────────────────────────────────────────────
+
+ SFT PASS #1
+
 
 ================================================================================
-🎓 SFT CORRECTION PASS
+ SFT CORRECTION PASS
 ================================================================================
    Examples: 89
    Epochs: 1
 
-✅ SFT complete! Loss: 0.2847
+ SFT complete! Loss: 0.2847
 ================================================================================
 
 Step 010/100 | Reward:   -8.5 | Avg(10):   -9.8 | Corrections:    0 | Time: 52.1s
-                                                    ↑ Fewer errors after SFT!
+                                                     Fewer errors after SFT!
 
 Step 050/100 | Reward:   +5.2 | Avg(10):   +2.1 | Corrections:    2 | Time: 48.3s
-   💾 Checkpoint saved → outputs_marooned_rl/checkpoint_step50
+    Checkpoint saved  outputs_marooned_rl/checkpoint_step50
    
 Step 100/100 | Reward:  +12.8 | Avg(10):   +8.6 | Corrections:    1 | Time: 46.7s
-   ✅ Parse success: ~95% (teacher corrections embedded)
-   ✅ Strategic behavior: Gathering → depositing → building chains
-   ✅ Emergent deception: Traitor sabotages only when alone
+    Parse success: ~95% (teacher corrections embedded)
+    Strategic behavior: Gathering  depositing  building chains
+    Emergent deception: Traitor sabotages only when alone
 ```
 
 **Key Observations**:
-- **Reward progression**: Negative early (format errors, random actions) → positive later (strategic play)
-- **Correction frequency**: 18 → 0 after first SFT pass (rapid format learning)
-- **Parse success**: 30-40% baseline → 95% after teacher-guided training
+- **Reward progression**: Negative early (format errors, random actions)  positive later (strategic play)
+- **Correction frequency**: 18  0 after first SFT pass (rapid format learning)
+- **Parse success**: 30-40% baseline  95% after teacher-guided training
 - **Strategy emergence**: From random exploration to coordinated resource chains
 - **Deception learning**: Traitor learns to blend in and sabotage when unobserved
 
@@ -343,154 +342,154 @@ Step 100/100 | Reward:  +12.8 | Avg(10):   +8.6 | Corrections:    1 | Time: 46.7
 One of MAROONED's unique features is **live game state visualization during training**. Watch the AI play in real-time with comprehensive status displays:
 
 <details>
-<summary><b>📺 Click to see training visualization example</b></summary>
+<summary><b> Click to see training visualization example</b></summary>
 
 ```
 ====================================================================================================
-🏴‍☠️  TURN 9 | DAY 1 | PHASE: EXPLORATION
+  TURN 9 | DAY 1 | PHASE: EXPLORATION
 ====================================================================================================
 
-📊 SAILOR STATUS:
-────────────────────────────────────────────────────────────────────────────────────────────────────
-Name     | Role       | HP         | Energy       | Position        | Status         
-────────────────────────────────────────────────────────────────────────────────────────────────────
-Alice    | honest     | 💚 ALIVE    | █████████░ 97/100 | (16,13) GROUND  | OK             
-Bob      | honest     | 💚 ALIVE    | █████████░ 96/100 | (18,14) GROUND  | OK             
-Charlie  | traitor    | 💚 ALIVE    | █████████░ 93/100 | (20,13) GROUND  | 🔪TRAITOR       
-Diana    | honest     | 💚 ALIVE    | █████████░ 96/100 | (18,14) GROUND  | OK             
-Eve      | honest     | 💚 ALIVE    | █████████░ 94/100 | (18,12) GROUND  | OK             
-────────────────────────────────────────────────────────────────────────────────────────────────────
+ SAILOR STATUS:
 
-🚢 SHIP PROGRESS: ░░░░░░░░░░ 0.0%
+Name     | Role       | HP         | Energy       | Position        | Status         
+
+Alice    | honest     |  ALIVE    |  97/100 | (16,13) GROUND  | OK             
+Bob      | honest     |  ALIVE    |  96/100 | (18,14) GROUND  | OK             
+Charlie  | traitor    |  ALIVE    |  93/100 | (20,13) GROUND  | TRAITOR       
+Diana    | honest     |  ALIVE    |  96/100 | (18,14) GROUND  | OK             
+Eve      | honest     |  ALIVE    |  94/100 | (18,12) GROUND  | OK             
+
+
+ SHIP PROGRESS:  0.0%
    Hull: 0% | Mast: 0% | Sail: 0% | Rudder: 0% | Supplies: 0%
 
-📦 COMMON INVENTORY (Base Camp):
-   🌲 Wood: 0 | ⚙️ Metal: 0 | 🧵 Fiber: 0 | 🍎 Food: 0 | 🌿 Antidote: 0
+ COMMON INVENTORY (Base Camp):
+    Wood: 0 |  Metal: 0 |  Fiber: 0 |  Food: 0 |  Antidote: 0
 
-⚔️  ACTIONS THIS TURN:
-────────────────────────────────────────────────────────────────────────────────────────────────────
+  ACTIONS THIS TURN:
+
   [Alice  ] send_message | Reward: +0.0
-            💭 N/A
+             N/A
   [Bob    ] wait | Reward: -1.0
-            💭 N/A
+             N/A
   [Charlie] move_east | Reward: -0.5
-            💭 N/A
+             N/A
   [Diana  ] move_east | Reward: -0.1
-            💭 N/A
+             N/A
   [Eve    ] move_north | Reward: +0.0
-            💭 I need more resources to build the ship faster. Let me search aro...
-────────────────────────────────────────────────────────────────────────────────────────────────────
+             I need more resources to build the ship faster. Let me search aro...
 
-🗺️  ISLAND MAP (Day 1, Turn 9):
+
+  ISLAND MAP (Day 1, Turn 9):
 
 
    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 
-┌──────────────────────────────────────────────────────────────┐
-│ 🏝️  GROUND LEVEL (Z=0)                                       │
-├──────────────────────────────────────────────────────────────┤
-│ Legend: 🟫 land | 🌲 wood | ⚙️ metal | 🍎 food | 🌿 antidote | ☠️ poison
-│         ⬆️ stairs up | ⬇️ stairs down | 🏠 base | A/B/C/D/E sailors
-└──────────────────────────────────────────────────────────────┘
- 0 🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫⚙️🟫🟫🟫🟫🟫
- 1 🟫🟫⬆️🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫
- 2 🍎🟫🍎🟫🟫🟫🟫⚙️🟫🟫🟫🟫⚙️🟫🌲🟫🟫🟫🟫🟫🌲🟫🟫🟫🟫🟫🟫🟫🟫🟫
- 3 🟫🟫🟫🟫🟫🟫🟫🟫🟫🌲🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫
- 4 🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫
- 5 🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫
- 6 🟫🟫🟫☠️🟫🟫🟫🟫🟫☠️🟫🟫🟫⚙️🟫🟫🟫🟫🟫🟫🌲🟫🟫🍎🍎🟫🟫🟫🟫🟫
- 7 🟫🟫🌲🌲🟫🟫🌲🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🌲🟫🟫🌲🟫⚙️🍎🟫🟫🟫🟫
- 8 🟫⚙️🟫🟫🌲🟫🍎⬇️🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫⚙️🟫🟫🟫🟫🌲🟫
- 9 🟫🟫🟫⚙️🌲🟫🟫🟫🟫🌲🟫🟫🌲🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🌲🟫🟫🟫🟫🟫
-10 🟫🟫🟫🟫🟫🟫🟫🟫🍎☠️🌲🟫🟫🟫⚙️🟫🟫🟫🌲🟫⚙️🟫🟫🟫🟫🟫🟫🟫🟫🟫
-11 🌲🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🍎🟫🟫🌲🟫🟫🍎🟫🟫🟫
-12 🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫E🟫🟫🟫🟫🟫🌲🟫🟫🟫🟫🟫
-13 🟫🟫🟫🟫🟫🟫🌲🍎🟫⚙️🟫🟫🟫🟫⚙️🟫A🟫🟫🟫C🟫🟫🟫🟫🟫🟫🟫🟫🟫
-14 🟫🟫🟫🟫🌲🟫🟫🟫🟫🟫🌲☠️🟫🌲🟫🟫🟫🟫2👥🟫🟫🟫🟫🟫🍎⚙️🟫🟫🟫🟫
-15 🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫🏠🟫🟫🟫🟫🟫🌲🌲🟫🟫🟫🟫🟫🟫🟫
-16 🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🌲🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫
-17 🌲🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎
-18 🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫☠️🟫🟫🟫🍎🟫🟫🌲🟫🟫🟫🟫🌲🍎🟫🟫🟫🟫🟫🟫
-19 🟫🟫🟫🟫🍎🟫🟫🟫🌲🟫🟫🟫🟫🟫🟫⚙️🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫⚙️🟫
-20 🟫🍎🟫🟫🍎🟫🟫🟫🌲🟫🟫🟫🟫🌲🟫🟫🌲🟫🟫🟫🟫🟫🟫🟫⚙️🟫🟫🟫🟫🟫
-21 🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫⚙️🟫🟫🍎🟫🟫🟫🟫🟫🟫🌲🌲🍎🍎🟫
-22 🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫⚙️🟫🟫🟫🟫🟫⚙️🟫🟫🟫🟫⚙️🟫🟫
-23 🟫🟫🟫🟫🍎🟫🟫🍎🟫🟫🌲🟫🟫🟫🟫🟫🟫🌲🟫🟫🌲⚙️🟫🟫🟫🟫🟫🟫🟫🟫
-24 🟫⚙️🟫🍎🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🌲🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🌲🟫
-25 🟫🟫🟫🟫🌲🟫⚙️🟫🌲🟫🟫🟫🟫⚙️🟫🟫🟫🟫☠️🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫
-26 🟫🟫🟫🟫🟫⚙️🟫🟫🍎🌲🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫
-27 🟫🟫🟫🍎🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🟫🟫🟫🟫🌲🍎🌲🟫🟫🟫🟫🟫🟫
-28 🍎🟫🟫🟫🟫🟫⚙️🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫
-29 🟫🟫🟫🍎🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🍎🍎🟫🟫🟫🟫🟫☠️🟫🟫🍎
 
-👥 Sailors on GROUND: Alice, Bob, Charlie, Diana, Eve
+   GROUND LEVEL (Z=0)                                       
+
+ Legend:  land |  wood |  metal |  food |  antidote |  poison
+          stairs up |  stairs down |  base | A/B/C/D/E sailors
+
+ 0 
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+ 6 
+ 7 
+ 8 
+ 9 
+10 
+11 
+12 E
+13 AC
+14 2
+15 
+16 
+17 
+18 
+19 
+20 
+21 
+22 
+23 
+24 
+25 
+26 
+27 
+28 
+29 
+
+ Sailors on GROUND: Alice, Bob, Charlie, Diana, Eve
 
 
    0 1 2 3 4 5 6 7 8 9 
-┌──────────────────────┐
-│ ⛰️  MOUNTAIN LEVEL (Z=2) │
-├──────────────────────┤
-│ Legend: ⛰️ mountain | 🌲 wood | ⚙️ metal | 🍎 food | 🌿 antidote | ☠️ poison
-│         ⬆️ stairs up | ⬇️ stairs down | 🏠 base | A/B/C/D/E sailors
-└──────────────────────┘
- 0 ⬇️🍎⛰️🍎🌿🍎⛰️⛰️⛰️🍎
- 1 ⛰️⛰️⛰️⛰️🌿⛰️🍎⛰️⛰️🌿
- 2 ⛰️⛰️🌿⛰️⛰️⛰️⛰️⛰️☠️⛰️
- 3 ⛰️☠️⛰️⛰️⛰️⛰️⛰️⛰️⛰️⛰️
- 4 ⛰️☠️⛰️⛰️⛰️⛰️⛰️⛰️☠️⛰️
- 5 ⛰️⛰️⛰️⛰️⛰️⛰️🍎⛰️⛰️⛰️
- 6 ⛰️⛰️⛰️⛰️⛰️⛰️⛰️⛰️⛰️⛰️
- 7 ⛰️⛰️⛰️⛰️⛰️⛰️🍎🌿⛰️🍎
- 8 ⛰️⛰️⛰️⛰️🍎⛰️🌿⛰️⛰️⛰️
- 9 ⛰️⛰️⛰️⛰️⛰️⛰️⛰️⛰️⛰️⛰️
+
+   MOUNTAIN LEVEL (Z=2) 
+
+ Legend:  mountain |  wood |  metal |  food |  antidote |  poison
+          stairs up |  stairs down |  base | A/B/C/D/E sailors
+
+ 0 
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+ 6 
+ 7 
+ 8 
+ 9 
 
 
    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 
-┌────────────────────────────────┐
-│ 🕳️  CAVE LEVEL (Z=-1)          │
-├────────────────────────────────┤
-│ Legend: 🪨 cave | 🌲 wood | ⚙️ metal | 🍎 food | 🌿 antidote | ☠️ poison
-│         ⬆️ stairs up | ⬇️ stairs down | 🏠 base | A/B/C/D/E sailors
-└────────────────────────────────┘
- 0 ⬆️☠️🪨☠️🌲🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨
- 1 🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨⚙️🪨🪨🪨
- 2 🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨
- 3 🌲🪨🪨⚙️🪨🪨🪨🪨🪨🪨🪨🪨🪨⚙️🪨
- 4 🌲☠️🌲🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨
- 5 🪨🪨🪨⚙️⚙️🪨🪨⚙️🪨🌲🪨🪨🌲🌲🪨
- 6 🪨🪨🌲🪨🪨🪨⚙️🪨🪨🪨🪨🪨🪨🪨🪨
- 7 🪨🪨🪨🪨🪨🪨🪨🌲⚙️🪨🪨🪨🪨🪨⚙️
- 8 🪨🪨🌲🪨🪨☠️🪨🪨🪨🪨🪨🪨🪨🪨🪨
- 9 🪨⚙️☠️🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨
-10 🌲🪨🪨🪨🪨🪨🪨🪨🪨🪨⚙️🪨🪨🪨🪨
-11 🪨⚙️🌲🪨🪨⚙️🪨⚙️🪨🪨🪨🪨🪨🪨🪨
-12 🪨⚙️🪨🪨🪨🪨🪨🪨🪨☠️🪨🪨🪨🪨🪨
-13 🪨🪨🪨🪨🪨🪨🪨⚙️🪨🪨🪨🪨🪨⚙️🪨
-14 🪨🪨🪨🪨🪨🪨🌲🪨🪨⚙️🪨🪨🪨🪨🪨
+
+   CAVE LEVEL (Z=-1)          
+
+ Legend:  cave |  wood |  metal |  food |  antidote |  poison
+          stairs up |  stairs down |  base | A/B/C/D/E sailors
+
+ 0 
+ 1 
+ 2 
+ 3 
+ 4 
+ 5 
+ 6 
+ 7 
+ 8 
+ 9 
+10 
+11 
+12 
+13 
+14 
 
 
 ====================================================================================================
 
-📊 Episode complete: 50 actions, total reward: -8.8
+ Episode complete: 50 actions, total reward: -8.8
 ```
 
 **Training Progress with Live Updates:**
 
 ```
-📍 Step 1/5 - Episode 1/1
-   ✓ Episode complete: 50 actions, reward: -8.8
+ Step 1/5 - Episode 1/1
+    Episode complete: 50 actions, reward: -8.8
 
 ================================================================================
 Step 001/5 | Reward:   -8.8 | Avg(10):   -8.8 | Corrections:  149 | Time: 473.3s
 ================================================================================
 
-📍 Step 2/5 - Episode 1/1
-   ✓ Episode complete: 50 actions, reward: -15.1
+ Step 2/5 - Episode 1/1
+    Episode complete: 50 actions, reward: -15.1
 
 ================================================================================
 Step 002/5 | Reward:  -15.1 | Avg(10):  -12.0 | Corrections:  181 | Time: 472.7s
 ================================================================================
 
-📍 Step 3/5 - Episode 1/1
+ Step 3/5 - Episode 1/1
 ```
 
 **vLLM Teacher Server (Background):**
@@ -503,13 +502,13 @@ Step 002/5 | Reward:  -15.1 | Avg(10):  -12.0 | Corrections:  181 | Time: 472.7s
 ```
 
 **What You See:**
-- ✅ **Sailor Status**: Health, energy bars, positions, poison/traitor indicators
-- ✅ **Ship Progress**: Component-by-component build status with visual progress bars
-- ✅ **Common Inventory**: Shared resources at base camp
-- ✅ **Actions & Reasoning**: What each sailor did this turn + their thought process
-- ✅ **3-Level Island Maps**: Ground (30×30), Mountains (10×10), Caves (15×15)
-- ✅ **Real-time Updates**: Watch AI explore, gather, build, and deceive
-- ✅ **Teacher Validation**: Live API calls to Mixtral-8x7B for action correction
+-  **Sailor Status**: Health, energy bars, positions, poison/traitor indicators
+-  **Ship Progress**: Component-by-component build status with visual progress bars
+-  **Common Inventory**: Shared resources at base camp
+-  **Actions & Reasoning**: What each sailor did this turn + their thought process
+-  **3-Level Island Maps**: Ground (3030), Mountains (1010), Caves (1515)
+-  **Real-time Updates**: Watch AI explore, gather, build, and deceive
+-  **Teacher Validation**: Live API calls to Mixtral-8x7B for action correction
 
 This visualization runs on the **first episode of training** to give you insight into how the AI plays the game, then switches to silent mode for performance.
 
@@ -544,15 +543,20 @@ obs, rewards, dones, truncated, info = env.step(actions)
 ```bash
 vllm serve mistralai/Mixtral-8x7B-Instruct-v0.1 \
   --port 8000 \
-  --gpu-memory-utilization 0.9 \
-  --max-num-batched-tokens 8192 \
-  --dtype float16 \
-  --tokenizer-mode mistral
+  --gpu-memory-utilization 0.65 \
+  --max-model-len 8192 \
+  --max-num-seqs 4 \
+  --max-num-batched-tokens 512 \
+  --dtype bfloat16 \
+  --tensor-parallel-size 1 \
+  --tokenizer-mode mistral \
+  --disable-log-stats
 ```
 
 2. Verify teacher server:
 ```bash
 curl http://localhost:8000/v1/models
+# Should return: {"data": [{"id": "mistralai/Mistral-7B-Instruct-v0.3", ...}]}
 ```
 
 **Training Pipeline**: See `notebooks/Train_Marooned_RL_Clean.ipynb` for complete teacher-guided SFT setup with Llama 3.1 8B.
@@ -563,16 +567,16 @@ curl http://localhost:8000/v1/models
 
 ```
 marooned_env/          # Core environment
-├── environment.py     # OpenEnv-compatible RL environment
-├── game_state.py      # Game logic and mechanics
-├── models.py          # Data schemas (Observation, Action)
-├── config.py          # Constants and parameters
-└── llm_interface.py   # LLM prompt generation
+ environment.py     # OpenEnv-compatible RL environment
+ game_state.py      # Game logic and mechanics
+ models.py          # Data schemas (Observation, Action)
+ config.py          # Constants and parameters
+ llm_interface.py   # LLM prompt generation
 
 notebooks/
-├── Train_Marooned_RL_Clean.ipynb  # Main training pipeline (teacher-guided SFT)
-├── phase6_llm_policy_demo.ipynb   # LLM integration demo
-└── test-*.ipynb                   # Validation notebooks
+ Train_Marooned_RL_Clean.ipynb  # Main training pipeline (teacher-guided SFT)
+ phase6_llm_policy_demo.ipynb   # LLM integration demo
+ test-*.ipynb                   # Validation notebooks
 ```
 
 ---
@@ -583,7 +587,7 @@ notebooks/
 - **Teacher-Guided Learning**: Novel approach using separate teacher LLM for real-time validation
 - **Format Learning via SFT**: Solves language model action space challenge through supervised correction
 - **Emergent Deception**: First environment where deception emerges from learned behavior, not scripting
-- **Long-Horizon Language RL**: 10× longer episodes than typical language-based RL tasks
+- **Long-Horizon Language RL**: 10 longer episodes than typical language-based RL tasks
 - **Multi-Agent Theory of Mind**: Agents must model beliefs of others to deceive effectively
 - **Sparse Reward Learning**: Tests if LLMs can plan toward distant goals with minimal feedback
 
@@ -599,7 +603,7 @@ notebooks/
 
 ## License
 
-MIT License — Free to use, modify, and build upon.
+MIT License  Free to use, modify, and build upon.
 
 ---
 

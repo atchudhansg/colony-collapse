@@ -1,17 +1,17 @@
-# `tests/` — Unit Testing & Validation Suite
+# `tests/`  Unit Testing & Validation Suite
 
-**Rigorous unit tests and integration tests for production-grade environment validation.** Unlike the exploratory notebooks (which demonstrate features interactively), these tests follow **software engineering best practices** — automated assertions, edge case coverage, and regression prevention.
+**Rigorous unit tests and integration tests for production-grade environment validation.** Unlike the exploratory notebooks (which demonstrate features interactively), these tests follow **software engineering best practices**  automated assertions, edge case coverage, and regression prevention.
 
 ```
 tests/
-├── test_env_basic.py                # Core environment initialization
-├── test_maps.py                     # Map generation and boundaries
-├── test_movement_and_energy.py      # Movement physics and energy costs
-├── test_multi_sailor.py             # Multi-agent coordination
-├── test_colonists_and_traitors.py   # Reward validation (gather, deposit)
-├── phase5_test.py                   # OpenEnv API compliance
-├── phase6_test_llm_policy.py        # LLM integration (prompt → action)
-└── llm_interface.py                 # Helper functions for LLM tests
+ test_env_basic.py                # Core environment initialization
+ test_maps.py                     # Map generation and boundaries
+ test_movement_and_energy.py      # Movement physics and energy costs
+ test_multi_sailor.py             # Multi-agent coordination
+ test_colonists_and_traitors.py   # Reward validation (gather, deposit)
+ phase5_test.py                   # OpenEnv API compliance
+ phase6_test_llm_policy.py        # LLM integration (prompt  action)
+ llm_interface.py                 # Helper functions for LLM tests
 ```
 
 ---
@@ -35,13 +35,13 @@ tests/
 
 ### Environment Foundation
 
-**`test_env_basic.py`** — Core initialization  
+**`test_env_basic.py`**  Core initialization  
 Validates:
 - `reset()` returns dict of observations for 5 sailors
-- Map dimensions correct (Ground 30×30, Mountains 10×10, Caves 15×15)
+- Map dimensions correct (Ground 3030, Mountains 1010, Caves 1515)
 - All data structures properly initialized
 
-**`test_maps.py`** — Map generation integrity  
+**`test_maps.py`**  Map generation integrity  
 Validates:
 - All terrain grids match expected shapes
 - Tile coordinates align with grid positions (no offset bugs)
@@ -51,21 +51,21 @@ Validates:
 
 ### Game Mechanics
 
-**`test_movement_and_energy.py`** — Physics simulation  
+**`test_movement_and_energy.py`**  Physics simulation  
 Validates:
 - Movement actions (`MOVE_NORTH`, `MOVE_SOUTH`, `CLIMB_UP`, etc.) change position
 - Energy decreases after movement (walking = -1, climbing up = -3)
 - Energy costs scale correctly with terrain difficulty
 - Blocked movement doesn't drain energy
 
-**`test_multi_sailor.py`** — Multi-agent interactions  
+**`test_multi_sailor.py`**  Multi-agent interactions  
 Validates:
 - All 5 sailors can act simultaneously in `step()`
 - Actions execute in correct order (no race conditions)
 - Sailors can't occupy same tile (collision detection)
 - Spatial view updates correctly when sailors move
 
-**`test_colonists_and_traitors.py`** — Reward engineering  
+**`test_colonists_and_traitors.py`**  Reward engineering  
 Validates:
 - `GATHER_RESOURCE` awards `+2.0` to colonists
 - `DEPOSIT_ITEM` at base camp awards `+0.5`
@@ -75,7 +75,7 @@ Validates:
 
 ### Integration Tests
 
-**`phase5_test.py`** — OpenEnv API compliance  
+**`phase5_test.py`**  OpenEnv API compliance  
 Validates:
 - Standard Gym interface (`reset()`, `step()`, `render()`)
 - Observations match OpenEnv schema
@@ -83,7 +83,7 @@ Validates:
 - Episode termination signals (done, truncated) work
 - Info dict contains required metadata
 
-**`phase6_test_llm_policy.py`** — LLM → Action pipeline  
+**`phase6_test_llm_policy.py`**  LLM  Action pipeline  
 Validates:
 - LLM response parsing (`parse_llm_response()`)
 - Safe action extraction (`parse_action_safe()`)
@@ -121,9 +121,9 @@ Phase 6 LLM policy flow test passed.
 
 ## Software Engineering Principles
 
-**Unit Testing**: Each test validates a **single responsibility** (map shape, energy cost, reward value) — not entire episodes
+**Unit Testing**: Each test validates a **single responsibility** (map shape, energy cost, reward value)  not entire episodes
 
-**Isolation**: Tests use `reset()` per run — no shared state, no cascading failures
+**Isolation**: Tests use `reset()` per run  no shared state, no cascading failures
 
 **Deterministic Seeding**: Fixed random seeds (`seed=42`) ensure reproducible results across runs
 
@@ -131,7 +131,7 @@ Phase 6 LLM policy flow test passed.
 
 **Regression Prevention**: Once a bug is fixed, a test is added to ensure it never returns
 
-**Integration Testing**: Final tests (`phase5`, `phase6`) validate end-to-end pipelines (LLM → action → step)
+**Integration Testing**: Final tests (`phase5`, `phase6`) validate end-to-end pipelines (LLM  action  step)
 
 ---
 
@@ -141,7 +141,7 @@ Phase 6 LLM policy flow test passed.
 
 **Validates Balancing**: Confirms reward values match design intent (ship completion = +100, not +10)  
 
-**Ensures Multi-Agent Correctness**: 5 simultaneous agents create race conditions — tests catch them  
+**Ensures Multi-Agent Correctness**: 5 simultaneous agents create race conditions  tests catch them  
 
 **LLM Safety**: Malformed model outputs (hallucinated actions, invalid coordinates) get sanitized  
 
