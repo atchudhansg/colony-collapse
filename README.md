@@ -6,9 +6,8 @@
 
 *Virtual Hackathon | October 18-20, 2025*
 
-Sponsored by <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="80" alt="Unsloth"/></a> • **PyTorch** • **AMD**
+Sponsored by <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="80" alt="Unsloth" style="vertical-align: middle;"/></a> • **PyTorch** • **AMD**
 
----
 
 </div>
 
@@ -17,6 +16,7 @@ Sponsored by <a href="https://unsloth.ai/"><img src="https://github.com/unslotha
 > "Pirates of the Caribbean meets Alice in Borderland meets Among Us."
 >
 > A death-game sandbox where AI agents must survive the island, each other, and the lies.
+
 ---
 
 ## Video Demonstration
