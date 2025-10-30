@@ -1,89 +1,26 @@
+# Video files (too large for git)
+*.mp4
+*.avi
+*.mov
+*.wmv
+
 # Python
-.venv/
-myenv/
-venv/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
 *.so
-*.egg
+.Python
 *.egg-info/
-dist/
-build/
+.venv/
+venv/
 
-# OpenEnv (entire framework - not part of submission)
-OpenEnv/
-notebooks/OpenEnv/
-
-# Training outputs and checkpoints
-outputs_marooned_rl/
-notebooks/outputs_marooned_rl/
-checkpoint_step*/
-final_model/
-sft_corrections/
-training_progress.png
-
-# Unsloth compiled cache (auto-generated)
-unsloth_compiled_cache/
-notebooks/unsloth_compiled_cache/
-
-# Model weights and training artifacts
-*.bin
+# Models (too large)
+models/
 *.safetensors
-*.pth
-*.ckpt
-*.pt
-model_cache/
-huggingface_cache/
-
-# vLLM server cache
-~/.cache/huggingface/
-.cache/
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-*.ipynb~
-.jupyter/
-
-# Notebook outputs (keep notebooks but ignore large cell outputs)
-*_output/
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.pdf
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Environment
-.env
-.env.local
-
-# Logs
-*.log
-logs/
-wandb/
-tensorboard/
-
-# Temporary files
-*.tmp
-*.temp
-.tmp/
-temp/
-scratch/
-
-# ROCm/CUDA specific
-.nv_cache/
-.rocm_cache/

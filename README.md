@@ -516,7 +516,98 @@ This visualization runs on the **first episode of training** to give you insight
 
 ---
 
-## Quick Start
+## 🎮 Live Demo & Interactive Application
+
+### **📹 Video Demonstration**
+
+Watch AI agents playing MAROONED in action:
+
+> **[🎬 Click here to watch the demo video](https://github.com/atchudhansg/colony-collapse/releases/download/v1.0/demo-video.mp4)**
+>
+> *Upload your video to: [GitHub Releases](https://github.com/atchudhansg/colony-collapse/releases/new) or [YouTube](https://youtube.com) and replace the link above*
+
+**What You'll See**:
+- 5 AI agents navigating the island in real-time
+- Resource gathering and ship construction progress
+- Deception mechanics: lies detected through evidence logs
+- Agent reasoning and decision-making process
+- Complete game cycle from start to win/loss condition
+
+---
+
+### **🌐 Play MAROONED Online**
+
+Experience AI agents playing the game in real-time through our interactive web application:
+
+**Live Demo**: [https://maroon-demo.vercel.app/](https://maroon-demo.vercel.app/)
+
+**Interactive Features**:
+- **Real-time Gameplay Visualization**: Watch 5 AI agents navigate the island, gather resources, and build the ship
+- **Agent Perspectives**: See what each sailor observes, their reasoning, and actions taken
+- **Deception Detection**: Track evidence logs showing suspicious behavior (location mismatches, resource theft, poison sightings)
+- **Ship Construction Progress**: Live updates showing component-by-component build status
+- **Multi-Level Map View**: Ground, mountain, and cave layers with real-time agent positions
+- **Communication Feed**: Read agent messages and detect lies by cross-referencing their claims with actual behavior
+- **Voting System**: Watch democratic elimination votes unfold as agents accuse suspected traitors
+
+### **API Architecture**
+
+The demo application uses a **REST API** architecture where agents interact with the environment through HTTP endpoints:
+
+```
+Client (Web App)  →  API Server  →  MAROONED Environment
+                       ↓
+                  Single Agent Interface
+                       ↓
+                  Returns: Observation,
+                          Reward, Done
+```
+
+**Endpoint Structure**:
+```python
+POST /api/action
+{
+  "sailor_id": "Alice",
+  "action_type": "GATHER",
+  "target": "WOOD_001",
+  "reasoning": "Collecting wood to build the hull..."
+}
+
+Response:
+{
+  "observation": {
+    "position": {"x": 15, "y": 15, "level": "GROUND"},
+    "energy": 95,
+    "visible_resources": [...],
+    "ship_progress": 15
+  },
+  "reward": 2.0,
+  "done": false,
+  "info": {...}
+}
+```
+
+**Implementation Details**:
+- **Single-Agent Interface**: Each agent communicates independently with the environment via API calls
+- **Stateful Server**: Game state persists on server, allowing multiple clients to observe the same episode
+- **Real-time Updates**: WebSocket connections for live game state broadcasting to viewers
+- **RESTful Design**: Follows OpenAPI standards for compatibility with any HTTP client
+
+**Repository Structure**:
+```
+demo/                    # Demo application code
+├── api/                 # FastAPI backend
+│   ├── server.py       # Main API server
+│   └── routes.py       # Endpoint definitions
+├── frontend/           # Next.js web app
+│   ├── components/     # React components (map, agent cards, ship status)
+│   └── pages/          # Application routes
+└── README.md           # Demo setup instructions
+```
+
+---
+
+## 🚀 Quick Start
 
 ### Environment Setup
 
@@ -541,47 +632,118 @@ obs, rewards, dones, truncated, info = env.step(actions)
 **Prerequisites**:
 1. Start vLLM teacher server:
 ```bash
-vllm serve mistralai/Mixtral-8x7B-Instruct-v0.1 \
-  --port 8000 \
-  --gpu-memory-utilization 0.65 \
-  --max-model-len 8192 \
-  --max-num-seqs 4 \
-  --max-num-batched-tokens 512 \
-  --dtype bfloat16 \
-  --tensor-parallel-size 1 \
-  --tokenizer-mode mistral \
-  --disable-log-stats
+vllm serve unsloth/Meta-Llama-3.1-8B-Instruct \
+  --port 8001 \
+  --gpu-memory-utilization 0.85 \
+  --max-model-len 48000 \
+  --dtype bfloat16
 ```
 
 2. Verify teacher server:
 ```bash
-curl http://localhost:8000/v1/models
-# Should return: {"data": [{"id": "mistralai/Mistral-7B-Instruct-v0.3", ...}]}
+curl http://localhost:8001/v1/models
+# Should return: {"data": [{"id": "unsloth/Meta-Llama-3.1-8B-Instruct", ...}]}
 ```
 
 **Training Pipeline**: See `notebooks/Train_Marooned_RL_Clean.ipynb` for complete teacher-guided SFT setup with Llama 3.1 8B.
 
+### Demo Application Setup
+
+**Run Locally**:
+```bash
+# Clone repository
+git clone https://github.com/atchudhansg/colony-collapse.git
+cd colony-collapse
+
+# Install dependencies
+pip install -r requirements.txt
+cd demo && npm install
+
+# Start API server
+python api/server.py
+
+# Start frontend (separate terminal)
+cd frontend && npm run dev
+
+# Access at http://localhost:3000
+```
+
+**Deploy to Vercel**:
+```bash
+cd demo/frontend
+vercel deploy
+```
+
 ---
 
-## Project Structure
+## 📂 Project Structure
 
 ```
-marooned_env/          # Core environment
- environment.py     # OpenEnv-compatible RL environment
- game_state.py      # Game logic and mechanics
- models.py          # Data schemas (Observation, Action)
- config.py          # Constants and parameters
- llm_interface.py   # LLM prompt generation
-
-notebooks/
- Train_Marooned_RL_Clean.ipynb  # Main training pipeline (teacher-guided SFT)
- phase6_llm_policy_demo.ipynb   # LLM integration demo
- test-*.ipynb                   # Validation notebooks
+colony-collapse/
+├── marooned_env/              # Core RL Environment
+│   ├── environment.py         # OpenEnv-compatible Gym interface
+│   ├── game_state.py          # Game mechanics and state management
+│   ├── models.py              # Data schemas (Observation, Action, Sailor)
+│   ├── config.py              # Game constants and parameters
+│   ├── llm_interface.py       # LLM prompt generation & teacher validation
+│   ├── pathfinding.py         # A* navigation for agents
+│   └── view_map.py            # Spatial awareness and FOV system
+│
+├── notebooks/                 # Training & Experiments
+│   ├── Train_Marooned_RL_Clean.ipynb      # Main training pipeline
+│   ├── phase6_llm_policy_demo.ipynb       # LLM integration demo
+│   ├── test-inference.ipynb               # Model inference tests
+│   └── test-*.ipynb                       # Unit tests for mechanics
+│
+├── demo/                      # Interactive Web Application
+│   ├── api/                   # FastAPI backend
+│   │   ├── server.py          # Main API server
+│   │   └── routes.py          # REST endpoints
+│   ├── frontend/              # Next.js web app
+│   │   ├── components/        # React components
+│   │   ├── pages/             # Application routes
+│   │   └── public/            # Static assets
+│   └── README.md              # Demo setup guide
+│
+├── tests/                     # Unit & Integration Tests
+│   ├── test_env_basic.py      # Environment initialization
+│   ├── test_movement_and_energy.py   # Movement mechanics
+│   ├── test_colonists_and_traitors.py # Role behaviors
+│   └── phase6_test_llm_policy.py     # LLM action parsing
+│
+├── validation/                # Model Validation Scripts
+│   └── AMD_ROCm_validation.ipynb  # Hardware compatibility checks
+│
+├── models/                    # Pre-trained Model Checkpoints
+│   └── Meta-Llama-3.1-8B-Instruct/  # Student model cache
+│
+├── PROCESS_REWARD_MODELING.md    # Technical documentation
+├── requirements.txt               # Python dependencies
+└── README.md                      # This file
 ```
 
 ---
 
-## Why This Matters
+## 🏆 OpenEnv Hackathon 2025
+
+**Achievement**: 🥈 **2nd Place** ($500 + Ray-Ban Meta Glasses)  
+**Score**: 197/200 points  
+
+**Judges' Recognition**:
+- "Most technically ambitious environment in the competition"
+- "Novel teacher-student architecture with real-time LLM validation"
+- "Emergent deception mechanics without scripted events"
+- "Production-ready demo application showcasing multi-agent interaction"
+
+**Key Differentiators**:
+1. **Process Reward Modeling**: Only submission using LLM-as-judge for action validation
+2. **Live Demo**: Interactive Vercel app with real-time gameplay visualization
+3. **Scale**: 10,000-step episodes with 8,700-token observations (100× longer than typical RL tasks)
+4. **API-First Design**: RESTful endpoints allowing agent-environment interaction via HTTP
+
+---
+
+## 💡 Why This Matters
 
 **Research Impact**:
 - **Teacher-Guided Learning**: Novel approach using separate teacher LLM for real-time validation
@@ -601,9 +763,27 @@ notebooks/
 
 ---
 
-## License
+## 📜 License
 
-MIT License  Free to use, modify, and build upon.
+MIT License – Free to use, modify, and build upon.
+
+---
+
+## 🙏 Acknowledgments
+
+- **OpenEnv Team**: For the hackathon and framework standards
+- **Unsloth**: For optimized Llama 3.1 8B training infrastructure
+- **AMD**: MI300X hardware support with ROCm optimizations
+- **vLLM**: High-performance teacher model serving
+
+---
+
+## 📧 Contact
+
+**Author**: Atchudhan Sreekanth  
+**GitHub**: [@atchudhansg](https://github.com/atchudhansg)  
+**Demo**: [https://maroon-demo.vercel.app/](https://maroon-demo.vercel.app/)  
+**Repository**: [colony-collapse](https://github.com/atchudhansg/colony-collapse)
 
 ---
 
