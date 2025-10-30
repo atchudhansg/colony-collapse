@@ -44,4 +44,3 @@ def log_episode_end(final_result: str, ship_progress: float, colonists_alive: in
 def get_logger():
     """Get current logger instance"""
     return training_logger
-
