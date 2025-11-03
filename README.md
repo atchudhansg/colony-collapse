@@ -2,9 +2,16 @@
 
 <img src="https://github.com/pytorch/pytorch/raw/main/docs/source/_static/img/pytorch-logo-dark.svg" width="120" alt="PyTorch"/>
 
-**Part of the Synthetic Data AI Agents Challenge**
+### Synthetic Data & OpenEnv Challenge
+**Virtual Hackathon | October 18-20, 2025**
 
-*Virtual Hackathon | October 18-20, 2025*
+---
+
+## 3RD PLACE WINNER
+
+This project placed **3rd** in the Synthetic Data AI Agents Challenge, recognized for its novel approach to multi-agent deception dynamics and sophisticated behavioral learning architecture.
+
+---
 
 Sponsored by <a href="https://unsloth.ai/"><img src="https://github.com/unslothai/unsloth/raw/main/images/unsloth%20new%20logo.png" width="80" alt="Unsloth" style="vertical-align: middle;"/></a> • **PyTorch** • **AMD**
 
